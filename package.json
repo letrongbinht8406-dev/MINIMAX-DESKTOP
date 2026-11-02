@@ -17,7 +17,7 @@
     "build:electron": "tsc -p tsconfig.electron.json",
     "typecheck": "tsc --noEmit && tsc -p tsconfig.electron.json --noEmit",
     "lint": "eslint . --max-warnings 0",
-    "test": "pnpm test:navigation && pnpm test:scene && pnpm test:character-library && pnpm test:prompt-auto-tags && pnpm test:lm-studio-api && pnpm test:llm-stream && pnpm test:preload-sandbox && pnpm test:workflows && pnpm test:ltx-ripple && pnpm test:fire-red-edit && pnpm test:continuation && pnpm test:atomic-saves && pnpm test:movie-editor && pnpm test:comfy-cancel && pnpm test:comfy-job-state && pnpm test:job-persistence && pnpm test:legacy-browser-storage && pnpm test:workspace-persistence",
+    "test": "pnpm test:navigation && pnpm test:scene && pnpm test:character-library && pnpm test:prompt-auto-tags && pnpm test:lm-studio-api && pnpm test:llm-stream && pnpm test:preload-sandbox && pnpm test:workflows && pnpm test:ltx-ripple && pnpm test:fire-red-edit && pnpm test:continuation && pnpm test:atomic-saves && pnpm test:movie-editor && pnpm test:comfy-cancel && pnpm test:comfy-job-state && pnpm test:job-persistence && pnpm test:legacy-browser-storage && pnpm test:workspace-persistence && pnpm test:image-providers",
     "test:comfy-cancel": "node scripts/test-comfy-cancel.cjs",
     "test:comfy-job-state": "node scripts/test-comfy-job-state.cjs",
     "test:job-persistence": "node scripts/test-job-persistence.cjs",
@@ -47,7 +47,8 @@
     "package:linux:deb": "pnpm build && electron-builder --linux deb --x64 --config.npmRebuild=false",
     "package:linux:appimage": "pnpm build && electron-builder --linux AppImage --x64 --config.npmRebuild=false",
     "package:linux:tar": "pnpm build && electron-builder --linux tar.gz --x64 --config.npmRebuild=false",
-    "package:mac": "pnpm build && electron-builder --mac zip --x64 --arm64 --config.npmRebuild=false"
+    "package:mac": "pnpm build && electron-builder --mac zip --x64 --arm64 --config.npmRebuild=false",
+    "test:image-providers": "node scripts/test-image-providers.cjs"
   },
   "dependencies": {
     "@radix-ui/react-alert-dialog": "^1.1.23",

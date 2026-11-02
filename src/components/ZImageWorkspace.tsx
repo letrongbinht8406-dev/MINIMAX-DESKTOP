@@ -2,6 +2,9 @@ import { PreviewPanel, ProductionLoading } from './Workspace'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { AlertCircle, Check, CircleStop, Dices, Film, Gauge, ImagePlus, LoaderCircle, Sparkles, WandSparkles } from 'lucide-react'
 import { buildZImage, ZIMAGE_DEFAULT_NEGATIVE_PROMPT, type ZImageVariant } from '../lib/zimage'
+import { imageProviders } from '../lib/imageProviders/index'
+import { buildImageGraph, resolveProvider } from '../lib/imageProviders/resolve'
+import type { ComfyPrompt } from '../lib/workflow'
 import { choices, type ObjectInfo } from '../lib/comfyInfo'
 import { RenderSize } from './RenderSize'
 import { SmartPromptEditor } from './SmartPromptEditor'
@@ -14,6 +17,9 @@ type StoredWorkspace = {
   negativePromptInitialized: boolean
   resolution: string
   variant: ZImageVariant
+  providerId: string
+  sampler: string
+  scheduler: string
   model: string
   encoder: string
   vae: string
@@ -29,6 +35,9 @@ const defaults: StoredWorkspace = {
   negativePromptInitialized: true,
   resolution: '1344x768',
   variant: 'turbo',
+  providerId: 'zimage',
+  sampler: 'res_multistep',
+  scheduler: 'simple',
   model: 'z_image_turbo_bf16.safetensors',
   encoder: 'qwen_3_4b.safetensors',
   vae: 'ae.safetensors',
@@ -44,7 +53,8 @@ function readWorkspace(): StoredWorkspace {
     const negativePrompt = saved.negativePromptInitialized || saved.negativePrompt?.trim()
       ? saved.negativePrompt ?? ZIMAGE_DEFAULT_NEGATIVE_PROMPT
       : ZIMAGE_DEFAULT_NEGATIVE_PROMPT
-    return { ...defaults, ...saved, negativePrompt, negativePromptInitialized: true, variant: saved.variant === 'base' ? 'base' : 'turbo' }
+    const providerId = typeof saved.providerId === 'string' && (saved.providerId === 'zimage' || imageProviders.some((provider) => provider.id === saved.providerId)) ? saved.providerId : 'zimage'
+  return { ...defaults, ...saved, providerId, negativePrompt, negativePromptInitialized: true, variant: saved.variant === 'base' ? 'base' : 'turbo' }
   }
   catch { return defaults }
 }
@@ -82,6 +92,9 @@ export function ZImageWorkspace({
   const [negativePrompt, setNegativePrompt] = useState(initial.negativePrompt)
   const [resolution, setResolution] = useState(initial.resolution)
   const [variant, setVariant] = useState<ZImageVariant>(initial.variant)
+  const [providerId, setProviderId] = useState(initial.providerId)
+  const [sampler, setSampler] = useState(initial.sampler)
+  const [scheduler, setScheduler] = useState(initial.scheduler)
   const [model, setModel] = useState(initial.model)
   const [encoder, setEncoder] = useState(initial.encoder)
   const [vae, setVae] = useState(initial.vae)
@@ -118,8 +131,8 @@ export function ZImageWorkspace({
   }, [])
 
   useEffect(() => {
-    localStorage.setItem('minimax.zimage-workspace', JSON.stringify({ prompt, negativePrompt, negativePromptInitialized: true, resolution, variant, model, encoder, vae, seed, steps, guidance, livePreview }))
-  }, [encoder, guidance, livePreview, model, negativePrompt, prompt, resolution, seed, steps, vae, variant])
+    localStorage.setItem('minimax.zimage-workspace', JSON.stringify({ prompt, negativePrompt, negativePromptInitialized: true, resolution, variant, providerId, sampler, scheduler, model, encoder, vae, seed, steps, guidance, livePreview }))
+  }, [encoder, guidance, livePreview, model, negativePrompt, prompt, providerId, resolution, sampler, scheduler, seed, steps, vae, variant])
 
   useEffect(() => {
     if (!job) return
@@ -130,7 +143,7 @@ export function ZImageWorkspace({
       try {
         const history = await window.minimax.getHistory(job.url, job.id)
         const entry = history[job.id] as HistoryEntry | undefined
-        if (entry?.status?.status_str === 'error') throw new Error('Z-Image 加载失败。请检查所选组件和 ComfyUI 日志。')
+        if (entry?.status?.status_str === 'error') throw new Error('图像生成失败。请检查所选模型组件和 ComfyUI 日志。')
         // The workflow's SaveImage is node 10. Prefer it so a preview-node
         // temporary image can never be mistaken for the production output.
         const image = entry?.outputs?.['10']?.images?.[0]
@@ -146,7 +159,7 @@ export function ZImageWorkspace({
         }
         if (entry?.status?.status_str === 'success') {
           completedWithoutOutputPolls += 1
-          if (completedWithoutOutputPolls > 2) throw new Error('ComfyUI 已完成 Z-Image 但未返回已保存的图片。请检查 SaveImage 节点和 ComfyUI 日志。')
+          if (completedWithoutOutputPolls > 2) throw new Error('ComfyUI 已完成图像生成但未返回已保存的图片。请检查 SaveImage 节点和 ComfyUI 日志。')
           if (!disposed) setMessage('ComfyUI finished; collecting the saved image…')
         } else if (!disposed) {
           setMessage(liveProgressRef.current?.label ?? 'Rendering the image in ComfyUI…')
@@ -177,21 +190,84 @@ export function ZImageWorkspace({
     setMessage(next === 'turbo' ? '已选择极速模式：快速 8 步生成。' : '已选择原始 Z-Image：40 步精细模式，支持 CFG 和负面提示词。')
     setError(false)
   }
+  const switchProvider = (nextId: string) => {
+    if (busy || nextId === providerId) return
+    setProviderId(nextId)
+    const provider = imageProviders.find((candidate) => candidate.id === nextId)
+    if (provider) {
+      const resolution = resolveProvider(info, provider)
+      const preset = provider.defaults
+      setSteps(preset.steps ?? 25); setGuidance(preset.cfg ?? 1); setSampler(preset.sampler ?? 'euler'); setScheduler(preset.scheduler ?? 'simple')
+      if (resolution.components.diffusion) setModel(String(resolution.components.diffusion))
+      if (resolution.components.textEncoder) setEncoder(String(resolution.components.textEncoder))
+      if (resolution.components.vae) setVae(String(resolution.components.vae))
+      setMessage('已切换图像模型：' + provider.label + (resolution.available ? '。' : '；缺少 ' + resolution.missing.join('，') + '。'))
+    } else {
+      setModel(preferredModel(installedModels, variant))
+      setEncoder('qwen_3_4b.safetensors'); setVae('ae.safetensors')
+      setSteps(variant === 'turbo' ? 8 : 40); setGuidance(variant === 'turbo' ? 1 : 4)
+      setSampler('res_multistep'); setScheduler('simple')
+      setMessage('已切回 Z-Image 内置管线。')
+    }
+    setError(false)
+  }
   const fields = [
-    { label: 'Z-Image 模型', value: model, set: setModel, node: 'UNETLoader', field: 'unet_name' },
-    { label: '文本编码器', value: encoder, set: setEncoder, node: 'CLIPLoader', field: 'clip_name' },
-    { label: '图像 VAE', value: vae, set: setVae, node: 'VAELoader', field: 'vae_name' },
+    { key: 'diffusion', label: 'Z-Image 模型', value: model, set: setModel, node: 'UNETLoader', field: 'unet_name' },
+    { key: 'textEncoder', label: '文本编码器', value: encoder, set: setEncoder, node: 'CLIPLoader', field: 'clip_name' },
+    { key: 'vae', label: '图像 VAE', value: vae, set: setVae, node: 'VAELoader', field: 'vae_name' },
   ]
+  const selectedProvider = imageProviders.find((provider) => provider.id === providerId)
+  const selectedResolution = selectedProvider ? resolveProvider(info, selectedProvider) : null
+  const providerOptions = [
+    { id: 'zimage', label: variant === 'turbo' ? 'Z-Image Turbo' : '原始 Z-Image', available },
+    ...imageProviders.map((provider) => {
+      const resolution = resolveProvider(info, provider)
+      return { id: provider.id, label: provider.label, available: resolution.available }
+    }),
+  ]
+  const activeAvailable = selectedResolution ? selectedResolution.available : available
+  const componentFields = selectedProvider
+    ? selectedProvider.requires.filter((requirement) => requirement.role === 'diffusion' || requirement.role === 'textEncoder' || requirement.role === 'vae').map((requirement) => ({
+        key: requirement.role,
+        label: requirement.role === 'diffusion' ? '扩散模型' : requirement.role === 'textEncoder' ? '文本编码器' : '图像 VAE',
+        value: requirement.role === 'diffusion' ? model : requirement.role === 'textEncoder' ? encoder : vae,
+        set: requirement.role === 'diffusion' ? setModel : requirement.role === 'textEncoder' ? setEncoder : setVae,
+        node: requirement.node,
+        field: requirement.field,
+      }))
+    : fields
+  const stepBounds: [number, number] = selectedProvider ? ((selectedProvider.constraints?.steps as [number, number] | undefined) ?? [1, 80]) : variant === 'turbo' ? [4, 20] : [28, 50]
+  const cfgBounds: [number, number] = selectedProvider ? ((selectedProvider.constraints?.cfg as [number, number] | undefined) ?? [1, 10]) : variant === 'turbo' ? [1, 3] : [3, 5]
 
   const create = async () => {
-    if (!connected || !available || !prompt.trim()) return
-    setBusy(true); setResult(null); setError(false); liveProgressRef.current = null; setLiveProgress(null); setMessage(`Submitting ${variant === 'turbo' ? 'Z-Image Turbo' : 'Original Z-Image'} workflow…`)
+    if (!connected || !activeAvailable || !prompt.trim()) return
+    setBusy(true); setResult(null); setError(false); liveProgressRef.current = null; setLiveProgress(null); setMessage(`Submitting ${selectedProvider?.label ?? (variant === 'turbo' ? 'Z-Image Turbo' : 'Original Z-Image')} workflow…`)
     try {
       const [width, height] = resolution.split('x').map(Number)
-      const graph = buildZImage(prompt.trim(), width, height, seed, model, encoder, vae, steps, guidance, variant, variant === 'base' ? negativePrompt.trim() : '', attentionBackend, gpuRouting, livePreview)
+      let graph: ComfyPrompt
+      if (selectedProvider) {
+        graph = buildImageGraph(info, selectedProvider, {
+          mode: 't2i',
+          prompt: prompt.trim(),
+          negativePrompt: negativePrompt.trim(),
+          width,
+          height,
+          steps,
+          cfg: guidance,
+          seed,
+          sampler,
+          scheduler,
+          batchSize: 1,
+          references: [],
+          loras: [],
+          filenamePrefix: 'oyama_image',
+        }) as unknown as ComfyPrompt
+      } else {
+        graph = buildZImage(prompt.trim(), width, height, seed, model, encoder, vae, steps, guidance, variant, variant === 'base' ? negativePrompt.trim() : '', attentionBackend, gpuRouting, livePreview)
+      }
       const response = await window.minimax.submitPrompt(url, graph, live.clientId)
       live.registerWorkflow(response.prompt_id, graph, livePreview)
-      if (gpuRouting) console.info('[GPU Routing] Z-Image component routing enabled.', gpuRouting)
+      if (!selectedProvider && gpuRouting) console.info('[GPU Routing] Z-Image component routing enabled.', gpuRouting)
       updateJob({ id: response.prompt_id, url })
     } catch (caught) {
       setMessage(caught instanceof Error ? caught.message : String(caught)); setError(true); setBusy(false)
@@ -212,7 +288,7 @@ export function ZImageWorkspace({
     if (!ollamaAvailable || !prompt.trim() || assisting) return
     setAssisting(true); setError(false); setMessage('Asking the local prompt assistant…')
     try {
-      const instruction = `Rewrite this as one polished still-image prompt for ${variant === 'turbo' ? 'Z-Image Turbo' : '原始 Z-Image 基础模型'}. Preserve the subject and intent while improving composition, lens, lighting, environment, texture, color, and clarity. Do not describe motion, sound, timelines, or multiple shots. Return only the finished prompt.\n\nDRAFT:\n${prompt.trim()}`
+      const instruction = `Rewrite this as one polished still-image prompt for ${selectedProvider?.label ?? (variant === 'turbo' ? 'Z-Image Turbo' : '原始 Z-Image 基础模型')}. Preserve the subject and intent while improving composition, lens, lighting, environment, texture, color, and clarity. Do not describe motion, sound, timelines, or multiple shots. Return only the finished prompt.\n\nDRAFT:\n${prompt.trim()}`
       setPrompt(await window.minimax.generateWithOllama(ollamaUrl, ollamaModel, instruction, llmProvider))
       setMessage('提示词已在本地增强。生成前请检查。')
     } catch (caught) { setMessage(caught instanceof Error ? caught.message : String(caught)); setError(true) }
@@ -224,23 +300,30 @@ export function ZImageWorkspace({
   return <div className="standard-page zimage-workspace">
     <div className="page-heading">
       <div><p className="eyebrow">CREATE · Z‑IMAGE</p><h1>Image Creation</h1><p>Design production-ready stills and opening frames with focused image controls.</p></div>
-      <div className="heading-state"><span className={connected && available ? 'ok' : 'warn'}>{connected && available ? <Check size={15} /> : <AlertCircle size={15} />}{connected ? available ? variant === 'turbo' ? '极速模式就绪' : '原始模式就绪' : `${variant === 'turbo' ? 'Turbo' : 'Original'} model needed` : '引擎离线'}</span></div>
+      <div className="heading-state"><span className={connected && activeAvailable ? 'ok' : 'warn'}>{connected && activeAvailable ? <Check size={15} /> : <AlertCircle size={15} />}{connected ? activeAvailable ? selectedProvider ? selectedProvider.label + ' 就绪' : variant === 'turbo' ? '极速模式就绪' : '原始模式就绪' : (selectedProvider ? selectedProvider.label : variant === 'turbo' ? 'Turbo' : 'Original') + ' model needed' : '引擎离线'}</span></div>
     </div>
 
     <div className="zimage-workspace-grid">
       <section className="zimage-composer">
-        <fieldset className="zimage-mode-picker" disabled={busy}>
+        <div className="field-group">
+          <div className="field-label"><label htmlFor="zimage-provider">图像模型</label><span>{selectedProvider?.description ?? 'Z-Image 内置管线'}</span></div>
+          <select id="zimage-provider" value={providerId} disabled={busy} onChange={(event) => switchProvider(event.target.value)}>
+            {providerOptions.map((option) => <option key={option.id} value={option.id} disabled={!option.available}>{option.label}{option.available ? '' : ' · 需要模型'}</option>)}
+          </select>
+          {selectedResolution && !selectedResolution.available && <p className="field-help">缺少：{selectedResolution.missing.join('；')}</p>}
+        </div>
+        {providerId === 'zimage' && <fieldset className="zimage-mode-picker" disabled={busy}>
           <legend>生成模式</legend>
           <label className={variant === 'turbo' ? 'selected' : ''}><input type="radio" name="zimage-variant" checked={variant === 'turbo'} onChange={() => switchVariant('turbo')} /><Gauge size={18} /><span><strong>Z-Image Turbo</strong><small>Fast preview and everyday creation · 8 steps</small></span><em className={turboInstalled ? 'installed' : ''}>{turboInstalled ? 'Installed' : '需要模型'}</em></label>
           <label className={variant === 'base' ? 'selected' : ''}><input type="radio" name="zimage-variant" checked={variant === 'base'} onChange={() => switchVariant('base')} /><Sparkles size={18} /><span><strong>Original Z-Image</strong><small>Full-capacity detail and stronger prompt control · 40 steps</small></span><em className={baseInstalled ? 'installed' : ''}>{baseInstalled ? 'Installed' : '需要模型'}</em></label>
-        </fieldset>
+        </fieldset>}
         <div className="field-group">
           <div className="field-label"><label htmlFor="zimage-prompt">图像提示词</label><span>{prompt.length.toLocaleString()} characters</span></div>
           <SmartPromptEditor id="zimage-prompt" value={prompt} onChange={setPrompt} placeholder="Describe the subject, environment, composition, lens, lighting, color, and opening-frame details… Type // for production commands." disabled={busy} />
           <div className="zimage-prompt-actions"><button className="secondary-button" onClick={() => void enhance()} disabled={busy || assisting || !ollamaAvailable || !prompt.trim()} title={ollamaAvailable ? `Enhance with ${ollamaModel}` : `Configure ${llmProvider === 'lmstudio' ? 'LM Studio' : llmProvider === 'llama' ? 'llama.cpp' : 'Ollama'} in Settings`}>{assisting ? <LoaderCircle size={15} className="spin" /> : <WandSparkles size={15} />}Enhance with {llmProvider === 'lmstudio' ? 'LM Studio' : llmProvider === 'llama' ? 'llama.cpp' : 'Ollama'}</button><small>{ollamaAvailable ? `${ollamaModel} · local` : `${llmProvider === 'lmstudio' ? 'LM Studio' : llmProvider === 'llama' ? 'llama.cpp' : 'Ollama'} unavailable`}</small></div>
         </div>
 
-        {variant === 'base' && <div className="field-group zimage-negative-prompt"><div className="field-label"><label htmlFor="zimage-negative-prompt">负面提示词 <small>质量预设</small></label><span>{negativePrompt.length.toLocaleString()} characters</span></div><textarea id="zimage-negative-prompt" value={negativePrompt} onChange={(event) => setNegativePrompt(event.target.value)} placeholder="Describe artifacts or unwanted elements to suppress…" disabled={busy} /><p className="field-help">Prefilled with a balanced artifact, anatomy, geometry, and unwanted-text filter. Edit or clear it when those elements are intentional.</p></div>}
+        {(selectedProvider || variant === 'base') && <div className="field-group zimage-negative-prompt"><div className="field-label"><label htmlFor="zimage-negative-prompt">负面提示词 <small>质量预设</small></label><span>{negativePrompt.length.toLocaleString()} characters</span></div><textarea id="zimage-negative-prompt" value={negativePrompt} onChange={(event) => setNegativePrompt(event.target.value)} placeholder="Describe artifacts or unwanted elements to suppress…" disabled={busy} /><p className="field-help">Prefilled with a balanced artifact, anatomy, geometry, and unwanted-text filter. Edit or clear it when those elements are intentional.</p></div>}
 
         <RenderSize value={resolution} onChange={setResolution} provider="zimage" />
         <div className="field-group"><label className="video-checkbox"><input type="checkbox" checked={livePreview} onChange={(event) => setLivePreview(event.target.checked)} />Show live previews while generating</label><small className="field-help">Off skips the preview output for new renders. Progress and the saved image stay available.</small></div>
@@ -248,14 +331,14 @@ export function ZImageWorkspace({
 
         <details className="zimage-model-settings">
           <summary>模型组件 <small>Advanced</small></summary>
-          <div className="zimage-quality-controls"><label>采样步数<input type="number" min={variant === 'turbo' ? 4 : 28} max={variant === 'turbo' ? 20 : 50} value={steps} disabled={busy} onChange={(event) => { const min = variant === 'turbo' ? 4 : 28; const max = variant === 'turbo' ? 20 : 50; setSteps(Math.max(min, Math.min(max, Number(event.target.value)))) }} /></label><label>Guidance<input type="number" min={variant === 'turbo' ? 1 : 3} max={variant === 'turbo' ? 3 : 5} step="0.1" value={guidance} disabled={busy} onChange={(event) => { const min = variant === 'turbo' ? 1 : 3; const max = variant === 'turbo' ? 3 : 5; setGuidance(Math.max(min, Math.min(max, Number(event.target.value)))) }} /></label></div>
-          <p className="field-help">{variant === 'turbo' ? 'Turbo 使用 8 步采样和 1 的引导系数。它针对速度进行了优化，不使用负面提示词。' : 'Original Z-Image is undistilled. The official range is 28–50 steps and guidance 3–5; 40 steps and guidance 4 balance detail and render time.'}</p>
-          <div className="zimage-models">{fields.map((field) => <label key={field.label}>{field.label}<select value={field.value} disabled={busy} onChange={(event) => field.set(event.target.value)}>{!choices(info, field.node, field.field).includes(field.value) && <option value={field.value}>{field.value} · unavailable</option>}{choices(info, field.node, field.field).map((name) => <option key={name}>{name}</option>)}</select></label>)}</div>
-          {!available && <p className="field-help">Choose a matching {variant === 'turbo' ? 'Z-Image Turbo' : '原始 Z-Image'} model registered with ComfyUI. The expected diffusion model is {variant === 'turbo' ? 'z_image_turbo_bf16.safetensors' : 'z_image_bf16.safetensors'}.</p>}
+          <div className="zimage-quality-controls"><label>采样步数<input type="number" min={stepBounds[0]} max={stepBounds[1]} value={steps} disabled={busy} onChange={(event) => { setSteps(Math.max(stepBounds[0], Math.min(stepBounds[1], Number(event.target.value)))) }} /></label><label>Guidance<input type="number" min={cfgBounds[0]} max={cfgBounds[1]} step="0.1" value={guidance} disabled={busy} onChange={(event) => { setGuidance(Math.max(cfgBounds[0], Math.min(cfgBounds[1], Number(event.target.value)))) }} /></label>{selectedProvider && <label>采样器<select value={sampler} disabled={busy} onChange={(event) => setSampler(event.target.value)}>{['euler', 'res_multistep', 'er_sde', 'unipc', 'dpmpp_2m'].map((name) => <option key={name}>{name}</option>)} </select></label>}{selectedProvider && <label>调度器<select value={scheduler} disabled={busy} onChange={(event) => setScheduler(event.target.value)}>{['simple', 'normal', 'karras'].map((name) => <option key={name}>{name}</option>)} </select></label>}</div>
+          <p className="field-help">{selectedProvider ? selectedProvider.description + '（官方推荐参数已预填，可在高级选项中微调）。' : variant === 'turbo' ? 'Turbo 使用 8 步采样和 1 的引导系数。它针对速度进行了优化，不使用负面提示词。' : 'Original Z-Image is undistilled. The official range is 28–50 steps and guidance 3–5; 40 steps and guidance 4 balance detail and render time.'}</p>
+          <div className="zimage-models">{componentFields.map((field) => <label key={field.key}>{field.label}<select value={field.value} disabled={busy} onChange={(event) => field.set(event.target.value)}>{!choices(info, field.node, field.field).includes(field.value) && <option value={field.value}>{field.value} · unavailable</option>}{choices(info, field.node, field.field).map((name) => <option key={name}>{name}</option>)}</select></label>)}</div>
+          {!activeAvailable && <p className="field-help">{selectedResolution ? '缺少 ' + selectedResolution.missing.join('；') : 'Choose a matching ' + (variant === 'turbo' ? 'Z-Image Turbo' : '原始 Z-Image') + ' model registered with ComfyUI. The expected diffusion model is ' + (variant === 'turbo' ? 'z_image_turbo_bf16.safetensors' : 'z_image_bf16.safetensors') + '.'}</p>}
         </details>
 
         {message && <div className={`zimage-message ${error ? 'error' : ''}`} role={error ? 'alert' : 'status'}>{busy && <LoaderCircle size={16} className="spin" />}<span>{message}</span></div>}
-        <div className="zimage-generate-bar">{busy && <button className="danger-button" onClick={() => void cancel()}><CircleStop size={16} />Cancel</button>}<button className="primary-button" disabled={busy || !connected || !available || !prompt.trim()} onClick={() => void create()}>{busy ? <LoaderCircle size={18} className="spin" /> : <Sparkles size={18} />}{busy ? 'Creating image…' : '创建图像'}</button></div>
+        <div className="zimage-generate-bar">{busy && <button className="danger-button" onClick={() => void cancel()}><CircleStop size={16} />Cancel</button>}<button className="primary-button" disabled={busy || !connected || !activeAvailable || !prompt.trim()} onClick={() => void create()}>{busy ? <LoaderCircle size={18} className="spin" /> : <Sparkles size={18} />}{busy ? 'Creating image…' : '创建图像'}</button></div>
       </section>
 
       <PreviewPanel>
