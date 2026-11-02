@@ -102,6 +102,8 @@ export type AppSettings = {
   blurNsfwLivePreviews: boolean
   queueDelaySeconds: number
   characterDetailReferencesEnabled: boolean
+  /** Built-in image model for the asset studios: a provider registry id or 'auto' (prefer the legacy Z-Image pipeline when its files are installed). */
+  imageProviderId: string
   renderSettingsPresets: RenderSettingsPreset[]
   generationDefaults: GenerationDefaults
 }

@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Building2, Camera, Check, CircleStop, Film, ImagePlus, Images, LoaderCircle, MapPin, Orbit, Play, Sparkles, Trash2, TreePine, WandSparkles, X } from 'lucide-react'
 import { choices, type ObjectInfo } from '../lib/comfyInfo'
 import { buildZImage } from '../lib/zimage'
+import { anyImageProviderAvailable, studioImagePrompt } from '../lib/imageProviders/studio'
 import { resolveAttentionBackend } from '../lib/attentionBackend'
 import { loadLocationProjects, locationReferences, newLocationProject, saveLocationProjects, LOCATION_LIBRARY_EVENT } from '../lib/locationLibrary'
 import type { AppSettings, GenerationJob, LocationProject, MediaFile } from '../types'
@@ -88,7 +89,19 @@ export function LocationStudio({ settings, info, connected, ollamaAvailable, aut
   const zModel = choices(info, 'UNETLoader', 'unet_name').find((name) => /z[_-]?image.*turbo/i.test(name)) ?? 'z_image_turbo_bf16.safetensors'
   const zEncoder = choices(info, 'CLIPLoader', 'clip_name').find((name) => /qwen[_-]?3[_-]?4b/i.test(name)) ?? 'qwen_3_4b.safetensors'
   const zVae = choices(info, 'VAELoader', 'vae_name').find((name) => /^ae\.safetensors$/i.test(name)) ?? 'ae.safetensors'
-  const zReady = connected && choices(info, 'UNETLoader', 'unet_name').includes(zModel) && choices(info, 'CLIPLoader', 'clip_name').includes(zEncoder) && choices(info, 'VAELoader', 'vae_name').includes(zVae)
+  const zLegacyFiles = choices(info, 'UNETLoader', 'unet_name').includes(zModel) && choices(info, 'CLIPLoader', 'clip_name').includes(zEncoder) && choices(info, 'VAELoader', 'vae_name').includes(zVae)
+  const zReady = connected && (zLegacyFiles || anyImageProviderAvailable(info))
+  const buildStill = (text: string, width: number, height: number, legacySteps: number): unknown => {
+    const explicit = settings.imageProviderId
+    if (explicit && explicit !== 'auto') {
+      const picked = studioImagePrompt(info, explicit, { prompt: text, width, height })
+      if (picked.ok) return picked.prompt
+    }
+    if (zLegacyFiles) return buildZImage(text, width, height, Math.floor(Math.random() * 1_000_000_000), zModel, zEncoder, zVae, legacySteps, 1, 'turbo', '', resolveAttentionBackend(settings.attentionBackend, choices(info, 'ModelAttentionBackend', 'attention')))
+    const fallback = studioImagePrompt(info, null, { prompt: text, width, height })
+    if (fallback.ok) return fallback.prompt
+    throw new Error('No image model available: please install the Z-Image Turbo or Qwen-Image model set and rescan.')
+  }
   const chooseImage = async (target: 'base' | 'reference' = 'reference') => {
     const picked = await window.minimax.chooseMedia('image'); if (!picked) return
     const projectId = active.id
@@ -109,7 +122,7 @@ export function LocationStudio({ settings, info, connected, ollamaAvailable, aut
   const createMaster = async () => {
     if (!zReady || busy || !prompt.trim()) return
     setBusy(true); setError(false); setMessage('Submitting the location reference to Z-Image Turbo…')
-    try { const response = await window.minimax.submitPrompt(settings.comfyUrl, buildZImage(prompt, 1344, 768, Math.floor(Math.random() * 1_000_000_000), zModel, zEncoder, zVae, 8, 1, 'turbo', '', resolveAttentionBackend(settings.attentionBackend, choices(info, 'ModelAttentionBackend', 'attention')))); setJob({ id: response.prompt_id, url: settings.comfyUrl, locationId: active.id }); setMessage('Constructing the location reference in ComfyUI…') }
+    try { const response = await window.minimax.submitPrompt(settings.comfyUrl, buildStill(prompt, 1344, 768, 8)); setJob({ id: response.prompt_id, url: settings.comfyUrl, locationId: active.id }); setMessage('Constructing the location reference in ComfyUI…') }
     catch (reason) { setMessage(reason instanceof Error ? reason.message : String(reason)); setError(true); setBusy(false) }
   }
   const cancel = async () => { if (!job) return; try { await window.minimax.cancelPrompt(job.url, job.id); setMessage('地点参考渲染已取消。') } catch (reason) { setMessage(reason instanceof Error ? reason.message : String(reason)); setError(true) } finally { setJob(null); setBusy(false) } }

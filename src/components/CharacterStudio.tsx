@@ -3,6 +3,7 @@ import { AlertCircle, Check, ChevronDown, CircleStop, Film, ImagePlus, Images, L
 import { CHARACTER_LIBRARY_EVENT, characterReferences, loadCharacterProjects, newCharacterProject, removeCharacterImage, saveCharacterProjects } from '../lib/characterLibrary'
 import { choices, type ObjectInfo } from '../lib/comfyInfo'
 import { buildZImage } from '../lib/zimage'
+import { anyImageProviderAvailable, studioImagePrompt } from '../lib/imageProviders/studio'
 import { resolveAttentionBackend } from '../lib/attentionBackend'
 import { loadWardrobeProjects, wardrobeReferences, WARDROBE_LIBRARY_EVENT } from '../lib/wardrobeLibrary'
 import { ACCESSORY_LIBRARY_EVENT, loadAccessoryProjects } from '../lib/accessoryLibrary'
@@ -235,7 +236,19 @@ export function CharacterStudio({ settings, info, connected, ollamaAvailable, au
   const zModel = choices(info, 'UNETLoader', 'unet_name').find((name) => /z[_-]?image.*turbo/i.test(name)) ?? 'z_image_turbo_bf16.safetensors'
   const zEncoder = choices(info, 'CLIPLoader', 'clip_name').find((name) => /qwen[_-]?3[_-]?4b/i.test(name)) ?? 'qwen_3_4b.safetensors'
   const zVae = choices(info, 'VAELoader', 'vae_name').find((name) => /^ae\.safetensors$/i.test(name)) ?? 'ae.safetensors'
-  const zReady = connected && choices(info, 'UNETLoader', 'unet_name').includes(zModel) && choices(info, 'CLIPLoader', 'clip_name').includes(zEncoder) && choices(info, 'VAELoader', 'vae_name').includes(zVae)
+  const zLegacyFiles = choices(info, 'UNETLoader', 'unet_name').includes(zModel) && choices(info, 'CLIPLoader', 'clip_name').includes(zEncoder) && choices(info, 'VAELoader', 'vae_name').includes(zVae)
+  const zReady = connected && (zLegacyFiles || anyImageProviderAvailable(info))
+  const buildStill = (text: string, width: number, height: number, legacySteps: number): unknown => {
+    const explicit = settings.imageProviderId
+    if (explicit && explicit !== 'auto') {
+      const picked = studioImagePrompt(info, explicit, { prompt: text, width, height })
+      if (picked.ok) return picked.prompt
+    }
+    if (zLegacyFiles) return buildZImage(text, width, height, Math.floor(Math.random() * 1_000_000_000), zModel, zEncoder, zVae, legacySteps, 1, 'turbo', '', resolveAttentionBackend(settings.attentionBackend, choices(info, 'ModelAttentionBackend', 'attention')))
+    const fallback = studioImagePrompt(info, null, { prompt: text, width, height })
+    if (fallback.ok) return fallback.prompt
+    throw new Error('No image model available: please install the Z-Image Turbo or Qwen-Image model set and rescan.')
+  }
   const identitySurveyRef2vaModel = choices(info, 'UNETLoader', 'unet_name').find((name) => /minimax_h3_ref2va/i.test(name))
   const identitySurveyTurboLora = choices(info, 'LoraLoaderModelOnly', 'lora_name').find((name) => /minimax_h3_ref2v_turbo_8step/i.test(name))
   const identitySurveyTextEncoder = choices(info, 'CLIPLoader', 'clip_name').find((name) => /qwen3vl_32b_minimax_h3/i.test(name))
@@ -256,7 +269,7 @@ export function CharacterStudio({ settings, info, connected, ollamaAvailable, au
     if (!zReady || masterBusy || !renderPrompt.trim()) return
     setMasterBusy(true); setMasterError(false); setMasterMessage(target === 'sheet' ? 'Submitting the four-view character sheet to Z-Image Turbo…' : 'Submitting the master reference to Z-Image Turbo…')
     try {
-      const response = await window.minimax.submitPrompt(settings.comfyUrl, buildZImage(renderPrompt.trim(), target === 'sheet' ? 1024 : 768, target === 'sheet' ? 1024 : 1024, Math.floor(Math.random() * 1_000_000_000), zModel, zEncoder, zVae, identitySteps, 1, 'turbo', '', resolveAttentionBackend(settings.attentionBackend, choices(info, 'ModelAttentionBackend', 'attention'))))
+      const response = await window.minimax.submitPrompt(settings.comfyUrl, buildStill(renderPrompt.trim(), target === 'sheet' ? 1024 : 768, target === 'sheet' ? 1024 : 1024, identitySteps))
       setMasterJob({ id: response.prompt_id, url: settings.comfyUrl, characterId: active.id, target })
       setMasterMessage(target === 'sheet' ? 'Constructing the character sheet in ComfyUI…' : 'Rendering the character master reference in ComfyUI…')
     } catch (error) {
@@ -268,7 +281,7 @@ export function CharacterStudio({ settings, info, connected, ollamaAvailable, au
     if (!zReady || masterBusy || !zPrompt.trim()) return
     setMasterBusy(true); setMasterError(false); setIdentityCandidates([]); setSelectedCandidatePaths([]); setCandidateStep('choose'); setApprovedFlowProject(null); setIdentitySurveyStartedAt(null); setMasterMessage(`Queueing ${count} distinct identity candidates…`)
     try {
-      const responses = await Promise.allSettled(Array.from({ length: count }, () => window.minimax.submitPrompt(settings.comfyUrl, buildZImage(zPrompt.trim(), 768, 1024, Math.floor(Math.random() * 1_000_000_000), zModel, zEncoder, zVae, identitySteps, 1, 'turbo', '', resolveAttentionBackend(settings.attentionBackend, choices(info, 'ModelAttentionBackend', 'attention'))))))
+      const responses = await Promise.allSettled(Array.from({ length: count }, () => window.minimax.submitPrompt(settings.comfyUrl, buildStill(zPrompt.trim(), 768, 1024, identitySteps))))
       const queued = responses.flatMap((response) => response.status === 'fulfilled' ? [{ id: response.value.prompt_id, url: settings.comfyUrl, characterId: active.id }] : [])
       if (!queued.length) throw new Error(responses.find((response) => response.status === 'rejected')?.reason instanceof Error ? responses.find((response) => response.status === 'rejected')!.reason.message : '无法将身份候选项加入队列。')
       setBatchJobs(queued)

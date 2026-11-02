@@ -34,6 +34,7 @@ const settings: AppSettings = {
   blurNsfwLivePreviews: false,
   queueDelaySeconds: 0,
   characterDetailReferencesEnabled: false,
+    imageProviderId: 'auto',
   renderSettingsPresets: [],
   generationDefaults: {
     resolution: '1344x768', duration: 5, turbo: 'off', steps: 30,

@@ -4,6 +4,7 @@ import { Check, CircleStop, Glasses, ImagePlus, LoaderCircle, Sparkles, Trash2, 
 import { ACCESSORY_LIBRARY_EVENT, loadAccessoryProjects, newAccessoryProject, saveAccessoryProjects } from '../lib/accessoryLibrary'
 import { choices, type ObjectInfo } from '../lib/comfyInfo'
 import { buildZImage } from '../lib/zimage'
+import { anyImageProviderAvailable, studioImagePrompt } from '../lib/imageProviders/studio'
 import { resolveAttentionBackend } from '../lib/attentionBackend'
 import type { AccessoryProject, AppSettings, MediaFile } from '../types'
 import { ReferenceApprovalModal } from './ReferenceApprovalModal'
@@ -26,12 +27,24 @@ export function AccessoryStudio({ settings, info, connected, onNotice }: { setti
   const zModel = choices(info, 'UNETLoader', 'unet_name').find((name) => /z[_-]?image.*turbo/i.test(name)) ?? 'z_image_turbo_bf16.safetensors'
   const zEncoder = choices(info, 'CLIPLoader', 'clip_name').find((name) => /qwen[_-]?3[_-]?4b/i.test(name)) ?? 'qwen_3_4b.safetensors'
   const zVae = choices(info, 'VAELoader', 'vae_name').find((name) => /^ae\.safetensors$/i.test(name)) ?? 'ae.safetensors'
-  const zReady = connected && choices(info, 'UNETLoader', 'unet_name').includes(zModel) && choices(info, 'CLIPLoader', 'clip_name').includes(zEncoder) && choices(info, 'VAELoader', 'vae_name').includes(zVae)
+  const zLegacyFiles = choices(info, 'UNETLoader', 'unet_name').includes(zModel) && choices(info, 'CLIPLoader', 'clip_name').includes(zEncoder) && choices(info, 'VAELoader', 'vae_name').includes(zVae)
+  const zReady = connected && (zLegacyFiles || anyImageProviderAvailable(info))
+  const buildStill = (text: string, width: number, height: number, legacySteps: number): unknown => {
+    const explicit = settings.imageProviderId
+    if (explicit && explicit !== 'auto') {
+      const picked = studioImagePrompt(info, explicit, { prompt: text, width, height })
+      if (picked.ok) return picked.prompt
+    }
+    if (zLegacyFiles) return buildZImage(text, width, height, Math.floor(Math.random() * 1_000_000_000), zModel, zEncoder, zVae, legacySteps, 1, 'turbo', '', resolveAttentionBackend(settings.attentionBackend, choices(info, 'ModelAttentionBackend', 'attention')))
+    const fallback = studioImagePrompt(info, null, { prompt: text, width, height })
+    if (fallback.ok) return fallback.prompt
+    throw new Error('No image model available: please install the Z-Image Turbo or Qwen-Image model set and rescan.')
+  }
   const chooseImage = async () => { const picked = await window.minimax.chooseMedia('image'); if (!picked) return; const projectId = active.id; patch({ referenceImage: { ...picked, kind: 'image', preview: await window.minimax.mediaUrl(picked.path) } }); onNotice('neutral', 'Image added. The local vision model is filling empty item fields…'); try { const result = await analyzeReferenceImage(settings, picked.path, 'accessory'); const current = loadAccessoryProjects().find((item) => item.id === projectId); if (!current) return; const category = current.category !== 'other' ? current.category : ['jewelry', 'eyewear', 'watch', 'bag', 'headwear', 'prop', 'other'].includes(result.category) ? result.category as AccessoryProject['category'] : current.category; patchById(projectId, { name: !current.name.trim() || /^Accessory \d+$/i.test(current.name) ? result.name || current.name : current.name, category, description: current.description.trim() ? current.description : result.description, colors: current.colors.trim() ? current.colors : result.colors, materials: current.materials.trim() ? current.materials : result.materials, visualStyle: current.visualStyle !== '电影感产品摄影' ? current.visualStyle : result.visualStyle || current.visualStyle }); onNotice('success', 'Existing image analyzed; empty item fields were filled for review.') } catch (reason) { onNotice('error', `The image was added, but automatic description failed: ${reason instanceof Error ? reason.message : String(reason)}`) } }
   const createReference = async () => {
     if (!zReady || busy || !active.name.trim()) return
     setBusy(true); setMessage('Submitting one isolated accessory reference…')
-    try { const response = await window.minimax.submitPrompt(settings.comfyUrl, buildZImage(prompt, 768, 768, Math.floor(Math.random() * 1_000_000_000), zModel, zEncoder, zVae, 8, 1, 'turbo', '', resolveAttentionBackend(settings.attentionBackend, choices(info, 'ModelAttentionBackend', 'attention')))); setJob({ id: response.prompt_id, url: settings.comfyUrl, accessoryId: active.id }); setMessage('Rendering the accessory in ComfyUI…') }
+    try { const response = await window.minimax.submitPrompt(settings.comfyUrl, buildStill(prompt, 768, 768, 8)); setJob({ id: response.prompt_id, url: settings.comfyUrl, accessoryId: active.id }); setMessage('Rendering the accessory in ComfyUI…') }
     catch (error) { setMessage(error instanceof Error ? error.message : String(error)); setBusy(false) }
   }
   const cancel = async () => { if (!job) return; try { await window.minimax.cancelPrompt(job.url, job.id) } finally { setJob(null); setBusy(false); setMessage('配饰渲染已取消。') } }

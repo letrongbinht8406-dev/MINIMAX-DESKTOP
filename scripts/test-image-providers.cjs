@@ -81,4 +81,24 @@ const noCache = objectInfo(
 )
 assert.equal(resolveProvider(noCache, byId['qwen-image-2.1']).available, false, 'QwenImage21Cache node is required')
 
+
+const { studioImagePrompt, anyImageProviderAvailable, listImageProviderResolutions } = load('src/lib/imageProviders/studio.ts')
+assert.ok(anyImageProviderAvailable(full))
+assert.ok(!anyImageProviderAvailable(noCache), 'no provider available without the custom Qwen nodes')
+assert.equal(listImageProviderResolutions(full).length, 5)
+
+const auto = studioImagePrompt(full, null, { prompt: 'hero still', width: 768, height: 1024 })
+assert.equal(auto.ok, true, auto.ok ? '' : auto.error)
+assert.equal(auto.providerId, 'qwen-image-2.1', 'auto picks the first available provider')
+const autoLatent = Object.values(auto.prompt).find((node) => node.class_type === 'EmptyLatentImage')
+assert.equal(autoLatent.inputs.width, 768)
+
+const explicit = studioImagePrompt(full, 'flux1-dev', { prompt: 'hero still', width: 1024, height: 1024 })
+assert.equal(explicit.ok, true)
+assert.ok(Object.values(explicit.prompt).some((node) => node.class_type === 'CheckpointLoaderSimple'))
+
+const missing = studioImagePrompt(noQwen21, 'qwen-image-2.1', { prompt: 'x', width: 512, height: 512 })
+assert.equal(missing.ok, false)
+assert.ok(missing.error.includes('diffusion'))
+
 process.stdout.write('PASS: image provider registry resolves against object_info and builds redline-clean graphs\n')
