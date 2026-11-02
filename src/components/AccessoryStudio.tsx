@@ -28,15 +28,15 @@ export function AccessoryStudio({ settings, info, connected, onNotice }: { setti
   const zEncoder = choices(info, 'CLIPLoader', 'clip_name').find((name) => /qwen[_-]?3[_-]?4b/i.test(name)) ?? 'qwen_3_4b.safetensors'
   const zVae = choices(info, 'VAELoader', 'vae_name').find((name) => /^ae\.safetensors$/i.test(name)) ?? 'ae.safetensors'
   const zLegacyFiles = choices(info, 'UNETLoader', 'unet_name').includes(zModel) && choices(info, 'CLIPLoader', 'clip_name').includes(zEncoder) && choices(info, 'VAELoader', 'vae_name').includes(zVae)
-  const zReady = connected && (zLegacyFiles || anyImageProviderAvailable(info))
+  const zReady = connected && (zLegacyFiles || anyImageProviderAvailable(info, settings.customImageModels ?? []))
   const buildStill = (text: string, width: number, height: number, legacySteps: number): unknown => {
     const explicit = settings.imageProviderId
     if (explicit && explicit !== 'auto') {
-      const picked = studioImagePrompt(info, explicit, { prompt: text, width, height })
+      const picked = studioImagePrompt(info, explicit, { prompt: text, width, height }, settings.customImageModels ?? [])
       if (picked.ok) return picked.prompt
     }
     if (zLegacyFiles) return buildZImage(text, width, height, Math.floor(Math.random() * 1_000_000_000), zModel, zEncoder, zVae, legacySteps, 1, 'turbo', '', resolveAttentionBackend(settings.attentionBackend, choices(info, 'ModelAttentionBackend', 'attention')))
-    const fallback = studioImagePrompt(info, null, { prompt: text, width, height })
+    const fallback = studioImagePrompt(info, null, { prompt: text, width, height }, settings.customImageModels ?? [])
     if (fallback.ok) return fallback.prompt
     throw new Error('No image model available: please install the Z-Image Turbo or Qwen-Image model set and rescan.')
   }
