@@ -19,3 +19,5 @@ export const imageProviders: ModelProvider[] = [
   flux1Dev,
   zImage,
 ]
+
+export { buildCustomProviders, createCustomProvider, providerCatalog, type CustomImageModel } from './customRegistry'

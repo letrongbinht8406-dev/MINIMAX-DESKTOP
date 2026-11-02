@@ -2,7 +2,9 @@ import { PreviewPanel, ProductionLoading } from './Workspace'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { AlertCircle, Check, CircleStop, Dices, Film, Gauge, ImagePlus, LoaderCircle, Sparkles, WandSparkles } from 'lucide-react'
 import { buildZImage, ZIMAGE_DEFAULT_NEGATIVE_PROMPT, type ZImageVariant } from '../lib/zimage'
-import { imageProviders } from '../lib/imageProviders/index'
+import { imageProviders, providerCatalog } from '../lib/imageProviders/index'
+import type { ModelProvider } from '../lib/imageProviders/provider'
+import type { CustomImageModel } from '../lib/imageProviders/customRegistry'
 import { buildImageGraph, resolveProvider } from '../lib/imageProviders/resolve'
 import type { ComfyPrompt } from '../lib/workflow'
 import { choices, type ObjectInfo } from '../lib/comfyInfo'
@@ -47,13 +49,13 @@ const defaults: StoredWorkspace = {
   livePreview: true,
 }
 
-function readWorkspace(): StoredWorkspace {
+function readWorkspace(catalog: ModelProvider[] = imageProviders): StoredWorkspace {
   try {
     const saved = JSON.parse(localStorage.getItem('minimax.zimage-workspace') ?? '{}') as Partial<StoredWorkspace>
     const negativePrompt = saved.negativePromptInitialized || saved.negativePrompt?.trim()
       ? saved.negativePrompt ?? ZIMAGE_DEFAULT_NEGATIVE_PROMPT
       : ZIMAGE_DEFAULT_NEGATIVE_PROMPT
-    const providerId = typeof saved.providerId === 'string' && (saved.providerId === 'zimage' || imageProviders.some((provider) => provider.id === saved.providerId)) ? saved.providerId : 'zimage'
+    const providerId = typeof saved.providerId === 'string' && (saved.providerId === 'zimage' || catalog.some((provider) => provider.id === saved.providerId)) ? saved.providerId : 'zimage'
   return { ...defaults, ...saved, providerId, negativePrompt, negativePromptInitialized: true, variant: saved.variant === 'base' ? 'base' : 'turbo' }
   }
   catch { return defaults }
@@ -72,7 +74,7 @@ type HistoryEntry = {
 }
 
 export function ZImageWorkspace({
-  url, info, connected, ollamaAvailable, llmProvider, ollamaUrl, ollamaModel, outputDirectory, attentionBackend, gpuRouting, onUse, onUseLtx,
+  url, info, connected, ollamaAvailable, llmProvider, ollamaUrl, ollamaModel, outputDirectory, attentionBackend, gpuRouting, customModels, onUse, onUseLtx,
 }: {
   url: string
   info: ObjectInfo
@@ -84,10 +86,12 @@ export function ZImageWorkspace({
   outputDirectory: string
   attentionBackend?: string
   gpuRouting?: WorkflowGpuRouting
+  customModels?: CustomImageModel[]
   onUse(file: MediaFile, resolution: string): void
   onUseLtx(file: MediaFile): void
 }) {
-  const initial = useMemo(readWorkspace, [])
+  const catalog = useMemo(() => providerCatalog(customModels ?? []), [customModels])
+  const initial = useMemo(() => readWorkspace(catalog), [catalog])
   const [prompt, setPrompt] = useState(initial.prompt)
   const [negativePrompt, setNegativePrompt] = useState(initial.negativePrompt)
   const [resolution, setResolution] = useState(initial.resolution)
@@ -193,7 +197,7 @@ export function ZImageWorkspace({
   const switchProvider = (nextId: string) => {
     if (busy || nextId === providerId) return
     setProviderId(nextId)
-    const provider = imageProviders.find((candidate) => candidate.id === nextId)
+    const provider = catalog.find((candidate) => candidate.id === nextId)
     if (provider) {
       const resolution = resolveProvider(info, provider)
       const preset = provider.defaults
@@ -216,11 +220,11 @@ export function ZImageWorkspace({
     { key: 'textEncoder', label: '文本编码器', value: encoder, set: setEncoder, node: 'CLIPLoader', field: 'clip_name' },
     { key: 'vae', label: '图像 VAE', value: vae, set: setVae, node: 'VAELoader', field: 'vae_name' },
   ]
-  const selectedProvider = imageProviders.find((provider) => provider.id === providerId)
+  const selectedProvider = catalog.find((provider) => provider.id === providerId)
   const selectedResolution = selectedProvider ? resolveProvider(info, selectedProvider) : null
   const providerOptions = [
     { id: 'zimage', label: variant === 'turbo' ? 'Z-Image Turbo' : '原始 Z-Image', available },
-    ...imageProviders.map((provider) => {
+    ...catalog.map((provider) => {
       const resolution = resolveProvider(info, provider)
       return { id: provider.id, label: provider.label, available: resolution.available }
     }),

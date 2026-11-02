@@ -1,3 +1,4 @@
+import type { CustomImageModel } from './lib/imageProviders/customRegistry'
 export type View = 'create' | 'continue' | 'scratchpad' | 'ltx25' | 'ltxripple' | 'photoedit' | 'music' | 'zimage' | 'referenceprep' | 'characters' | 'hair' | 'wardrobes' | 'accessories' | 'locations' | 'queue' | 'library' | 'clipmaster' | 'movie' | 'settings'
 export type GenerationMode = 'text' | 'image' | 'frames' | 'reference'
 export type ModelKind = 'diffusion_models' | 'text_encoders' | 'vae' | 'loras' | 'vae_approx' | 'clip_vision'
@@ -104,6 +105,7 @@ export type AppSettings = {
   characterDetailReferencesEnabled: boolean
   /** Built-in image model for the asset studios: a provider registry id or 'auto' (prefer the legacy Z-Image pipeline when its files are installed). */
   imageProviderId: string
+  customImageModels: CustomImageModel[]
   renderSettingsPresets: RenderSettingsPreset[]
   generationDefaults: GenerationDefaults
 }

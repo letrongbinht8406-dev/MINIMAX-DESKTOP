@@ -1,4 +1,5 @@
-import { imageProviders } from './index'
+import { providerCatalog } from './index'
+import type { CustomImageModel } from './customRegistry'
 import { buildImageGraph, resolveProvider, type ProviderResolution } from './resolve'
 import { defaultImageOptions, type ImageOptions } from './types'
 import type { ObjectInfo } from '../comfyInfo'
@@ -9,12 +10,12 @@ import type { ObjectInfo } from '../comfyInfo'
  * attention-backend routing), otherwise the first available provider.
  */
 
-export function listImageProviderResolutions(info: ObjectInfo, mode: ImageOptions['mode'] = 't2i'): ProviderResolution[] {
-  return imageProviders.map((provider) => resolveProvider(info, provider, mode))
+export function listImageProviderResolutions(info: ObjectInfo, mode: ImageOptions['mode'] = 't2i', customModels: CustomImageModel[] = []): ProviderResolution[] {
+  return providerCatalog(customModels).map((provider) => resolveProvider(info, provider, mode))
 }
 
-export function anyImageProviderAvailable(info: ObjectInfo): boolean {
-  return listImageProviderResolutions(info).some((resolution) => resolution.available)
+export function anyImageProviderAvailable(info: ObjectInfo, customModels: CustomImageModel[] = []): boolean {
+  return listImageProviderResolutions(info, 't2i', customModels).some((resolution) => resolution.available)
 }
 
 export type StudioImageResult =
@@ -25,9 +26,9 @@ export type StudioImageResult =
  * providerId: null = auto-pick the first available provider; a registry id =
  * use exactly that provider (fail with an actionable error if unavailable).
  */
-export function studioImagePrompt(info: ObjectInfo, providerId: string | null, request: Partial<ImageOptions>): StudioImageResult {
+export function studioImagePrompt(info: ObjectInfo, providerId: string | null, request: Partial<ImageOptions>, customModels: CustomImageModel[] = []): StudioImageResult {
   const mode = request.mode ?? 't2i'
-  const resolutions = imageProviders.map((provider) => resolveProvider(info, provider, mode))
+  const resolutions = providerCatalog(customModels).map((provider) => resolveProvider(info, provider, mode))
   const explicit = providerId ? resolutions.find((entry) => entry.provider.id === providerId) : undefined
   const target = explicit ?? (mode === 'edit' ? undefined : resolutions.find((entry) => entry.available))
   if (!target || !target.available) {

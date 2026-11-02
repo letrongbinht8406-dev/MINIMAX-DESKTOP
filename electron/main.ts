@@ -78,6 +78,7 @@ type AppSettings = {
   queueDelaySeconds: number
   characterDetailReferencesEnabled: boolean
   imageProviderId: string
+  customImageModels: Array<{ id: string; name: string; templateId: string; components: Record<string, string> }>
   renderSettingsPresets: RenderSettingsPreset[]
   generationDefaults: GenerationDefaults
 }
@@ -183,6 +184,7 @@ function defaultSettings(): AppSettings {
     queueDelaySeconds: 0,
     characterDetailReferencesEnabled: false,
     imageProviderId: 'auto',
+    customImageModels: [],
     renderSettingsPresets: [],
     generationDefaults: {
       resolution: '1344x768', duration: 5, turbo: 'off', steps: 30,
@@ -439,7 +441,8 @@ async function loadSettings(): Promise<AppSettings> {
     const validDevice = (value: unknown): GpuRouteDevice => typeof value === 'string' && (value === 'auto' || value === 'cpu' || /^gpu:\d+$/.test(value)) ? value as GpuRouteDevice : 'auto'
     const gpuRouting: GpuRoutingSettings = { ...defaults.gpuRouting, ...rawRouting, preset: rawRouting?.preset === 'single' || rawRouting?.preset === 'split' || rawRouting?.preset === 'custom' ? rawRouting.preset : 'automatic', strategy: rawRouting?.strategy === 'resident' || rawRouting?.strategy === 'cpu-fallback' ? rawRouting.strategy : 'sequential', diffusion: validDevice(rawRouting?.diffusion), textEncoder: validDevice(rawRouting?.textEncoder), videoVae: validDevice(rawRouting?.videoVae), audioVae: validDevice(rawRouting?.audioVae), previewVae: validDevice(rawRouting?.previewVae), allowOvercommit: rawRouting?.allowOvercommit === true, preloadDiffusionDuringTextEncoding: rawRouting?.preloadDiffusionDuringTextEncoding === true }
     const imageProviderId = raw.imageProviderId === 'qwen-image-2.1' || raw.imageProviderId === 'qwen-image-2512' || raw.imageProviderId === 'moss-image' || raw.imageProviderId === 'flux1-dev' || raw.imageProviderId === 'z-image' ? raw.imageProviderId : 'auto'
-    return { ...defaults, ...raw, outputDirectory, clipMasterOutputDirectory, uiScale, attentionBackend, solAttnTau, solCacheEnabled: raw.solCacheEnabled !== false, h3DiffusionPrecision: raw.h3DiffusionPrecision === 'nvfp4' ? 'nvfp4' : 'int8', gpuRouting, h3ParallelAttentionEnabled: raw.h3ParallelAttentionEnabled === true, queueDelaySeconds: Math.max(0, Math.min(600, Number(raw.queueDelaySeconds) || 0)), experimentalLtxMsrEnabled: raw.experimentalLtxMsrEnabled === true, blurNsfwLivePreviews: raw.blurNsfwLivePreviews === true, llmProvider: raw.llmProvider === 'lmstudio' ? 'lmstudio' : raw.llmProvider === 'llama' ? 'llama' : 'ollama', characterDetailReferencesEnabled: raw.characterDetailReferencesEnabled === true, renderSettingsPresets, paths: { ...defaults.paths, ...raw.paths }, generationDefaults , imageProviderId }
+    const customImageModels = Array.isArray(raw.customImageModels) ? raw.customImageModels.filter((entry) => entry && typeof entry.id === 'string' && typeof entry.name === 'string' && typeof entry.templateId === 'string').map((entry) => ({ id: entry.id, name: entry.name, templateId: entry.templateId, components: entry.components && typeof entry.components === 'object' ? Object.fromEntries(Object.entries(entry.components).filter((pair) => typeof pair[1] === 'string')) : {} })) : []
+    return { ...defaults, ...raw, outputDirectory, clipMasterOutputDirectory, uiScale, attentionBackend, solAttnTau, solCacheEnabled: raw.solCacheEnabled !== false, h3DiffusionPrecision: raw.h3DiffusionPrecision === 'nvfp4' ? 'nvfp4' : 'int8', gpuRouting, h3ParallelAttentionEnabled: raw.h3ParallelAttentionEnabled === true, queueDelaySeconds: Math.max(0, Math.min(600, Number(raw.queueDelaySeconds) || 0)), experimentalLtxMsrEnabled: raw.experimentalLtxMsrEnabled === true, blurNsfwLivePreviews: raw.blurNsfwLivePreviews === true, llmProvider: raw.llmProvider === 'lmstudio' ? 'lmstudio' : raw.llmProvider === 'llama' ? 'llama' : 'ollama', characterDetailReferencesEnabled: raw.characterDetailReferencesEnabled === true, renderSettingsPresets, paths: { ...defaults.paths, ...raw.paths }, generationDefaults , imageProviderId , customImageModels }
   } catch {
     return defaultSettings()
   }
