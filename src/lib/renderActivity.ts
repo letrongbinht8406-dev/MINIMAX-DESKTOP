@@ -10,7 +10,7 @@ export function formatRuntime(milliseconds: number) {
 
 export function formatStepDuration(milliseconds: number) {
   const seconds = Math.max(0, milliseconds / 1000)
-  return `${seconds < 10 ? seconds.toFixed(1) : Math.round(seconds)}s/step`
+  return `${seconds < 10 ? seconds.toFixed(1) : Math.round(seconds)} 秒/步`
 }
 
 export function appendComfyActivity(job: GenerationJob, event: NonNullable<GenerationJob['comfyActivity']>[number]) {
@@ -35,7 +35,7 @@ export function comfyHistoryActivity(messages: unknown[] | undefined) {
     if (!readable) return []
     const tinyVaeMismatch = /taeh3.*(?:decoder|decode).*?(?:mismatch|shape|channel)|(?:mismatch|shape|channel).*taeh3/i.test(readable)
     const notice = tinyVaeMismatch
-      ? 'H3 Tiny VAE preview is incompatible with this latent shape. Preview decoder disabled; final full Video VAE decode continues without retrying Tiny VAE.'
+      ? 'H3 Tiny VAE 预览与此潜空间形状不兼容。预览解码器已禁用；最终完整视频 VAE 解码继续，不再重试 Tiny VAE。'
       : `${node}${readable}`.slice(0, 260)
     return [{ level: tinyVaeMismatch ? 'warning' as const : /error|fail|interrupt/i.test(kind) ? 'error' as const : 'info' as const, message: notice }]
   })
@@ -43,7 +43,7 @@ export function comfyHistoryActivity(messages: unknown[] | undefined) {
 
 export function formatStepCountdown(milliseconds: number) {
   const seconds = Math.max(0, milliseconds / 1000)
-  if (seconds < 0.25) return 'due now'
+  if (seconds < 0.25) return '已到期'
   return `${seconds < 10 ? seconds.toFixed(1) : Math.ceil(seconds)}s`
 }
 

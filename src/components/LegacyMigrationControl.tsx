@@ -13,8 +13,8 @@ export function LegacyMigrationControl({ status, running, onRun }: LegacyMigrati
     : status?.migrated
       ? 'The previous MiniMax Studio profile was imported. Run this again only to collect files added to the old app after the first import.'
       : status?.available
-        ? 'Import your previous MiniMax Studio profile into Oyama. Existing Oyama data is never replaced.'
-        : 'No previous MiniMax Studio profile was found on this computer.'
+        ? '将您之前的 MiniMax Studio 配置导入 Oyama。现有的 Oyama 数据不会被覆盖。'
+        : '未在此计算机上找到之前的 MiniMax Studio 配置文件。'
 
   return <div className="legacy-migration-settings">
     <div>
@@ -24,7 +24,7 @@ export function LegacyMigrationControl({ status, running, onRun }: LegacyMigrati
     </div>
     <button type="button" className="secondary-button" disabled={!status?.available || running} onClick={onRun}>
       {running ? <LoaderCircle className="spin" size={15} /> : <History size={15} />}
-      {running ? 'Importing…' : status?.needsBrowserStorageRepair ? 'Restore projects & characters' : status?.migrated ? 'Import missing data again' : 'Import previous data'}
+      {running ? 'Importing…' : status?.needsBrowserStorageRepair ? '恢复项目与角色' : status?.migrated ? '重新导入缺失数据' : '导入之前的数据'}
     </button>
   </div>
 }

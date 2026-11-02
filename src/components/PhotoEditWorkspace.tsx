@@ -59,7 +59,7 @@ export function PhotoEditWorkspace({ url, info, connected, outputDirectory, inco
   const [result, setResult] = useState<MediaFile | null>(incomingSource ? null : initial.result)
   const [job, setJob] = useState<EditJob | null>(initial.job)
   const [preparing, setPreparing] = useState(false)
-  const [message, setMessage] = useState(incomingSource ? 'Ripple’s first frame is ready to edit.' : '')
+  const [message, setMessage] = useState(incomingSource ? 'Ripple 的首帧已准备好编辑。' : '')
   const [error, setError] = useState(false)
   const [saveProblem, setSaveProblem] = useState('')
   const [sourceUrl, setSourceUrl] = useState('')
@@ -70,12 +70,12 @@ export function PhotoEditWorkspace({ url, info, connected, outputDirectory, inco
   if (selected.modelLoader === 'UnetLoaderGGUF' && !info.UnetLoaderGGUF) missingNodes.push('UnetLoaderGGUF')
   if (selected.lightningLora && !info.LoraLoaderModelOnly) missingNodes.push('LoraLoaderModelOnly')
   const missing = [
-    ...(!connected ? ['Connect ComfyUI in Settings.'] : []),
+    ...(!connected ? ['请在设置中连接 ComfyUI。'] : []),
     ...(connected && missingNodes.length ? [`Update ComfyUI for: ${missingNodes.join(', ')}.`] : []),
     ...(connected && !selected.model ? ['Install a FireRed Image Edit transformer (GGUF or safetensors) in ComfyUI/models/diffusion_models.'] : []),
     ...(connected && !selected.encoder ? ['Install a Qwen 2.5 VL 7B text encoder in ComfyUI/models/text_encoders.'] : []),
     ...(connected && !selected.vae ? ['Install qwen_image_vae.safetensors in ComfyUI/models/vae.'] : []),
-    ...(connected && mode === 'turbo' && !selected.lightningLora ? ['Turbo needs a FireRed 8-step Lightning LoRA. Choose Quality to render without it.'] : []),
+    ...(connected && mode === 'turbo' && !selected.lightningLora ? ['Turbo 需要一个 FireRed 8 步 Lightning LoRA。选择 Quality 可在没有它的情况下渲染。'] : []),
   ]
   const busy = preparing || Boolean(job && !saveProblem)
 
@@ -107,7 +107,7 @@ export function PhotoEditWorkspace({ url, info, connected, outputDirectory, inco
         if (!active) return
         const entry = history[job.id] as HistoryEntry | undefined
         if (entry?.status?.status_str === 'error') {
-          setJob(null); setMessage('FireRed failed in ComfyUI. Check its execution log and the selected model files.'); setError(true)
+          setJob(null); setMessage('FireRed 在 ComfyUI 中执行失败。请检查其执行日志和所选模型文件。'); setError(true)
           return
         }
         const image = entry?.outputs?.['14']?.images?.[0]
@@ -116,13 +116,13 @@ export function PhotoEditWorkspace({ url, info, connected, outputDirectory, inco
           const saved = await window.minimax.saveComfyOutputImage(job.url, image, outputDirectory, 'photo-edit').catch(reason => {
             throw new Error(`FireRed finished, but the image could not be saved locally. Retry saving or choose the finished image from ComfyUI output. ${reason instanceof Error ? reason.message : String(reason)}`)
           })
-          if (active) { setResult({ ...saved, kind: 'image' }); setJob(null); setMessage('Photo edit ready. Send it to Ripple when it looks right.'); setError(false) }
+          if (active) { setResult({ ...saved, kind: 'image' }); setJob(null); setMessage('照片编辑已就绪。确认效果满意后发送到 Ripple。'); setError(false) }
           return
         }
         if (entry?.status?.status_str === 'success') {
           missingOutputPolls += 1
           if (missingOutputPolls > 2) {
-            setJob(null); setMessage('FireRed finished without a saved image. Check the SaveImage node in ComfyUI.'); setError(true)
+            setJob(null); setMessage('FireRed 已完成但未保存图像。请检查 ComfyUI 中的 SaveImage 节点。'); setError(true)
             return
           }
           setMessage('Collecting the edited image…')
@@ -136,7 +136,7 @@ export function PhotoEditWorkspace({ url, info, connected, outputDirectory, inco
           if (state) missingJobPolls = 0
           else missingJobPolls += 1
           if (missingJobPolls >= 5) {
-            setJob(null); setMessage('ComfyUI no longer has this edit. Choose its image from ComfyUI output, or render again.'); setError(true)
+            setJob(null); setMessage('ComfyUI 中已不存在此编辑。请从 ComfyUI 输出中选择对应图像，或重新渲染。'); setError(true)
             return
           }
           setMessage(state === 'queued' ? 'FireRed edit is queued in ComfyUI…' : state === 'running' ? 'FireRed is editing the photo in ComfyUI…' : 'Checking the FireRed edit in ComfyUI…')
@@ -144,7 +144,7 @@ export function PhotoEditWorkspace({ url, info, connected, outputDirectory, inco
       } catch (reason) {
         if (active) {
           const problem = reason instanceof Error ? reason.message : String(reason)
-          if (problem.startsWith('FireRed finished, but')) { setSaveProblem(problem); setMessage(problem); setError(true); return }
+          if (problem.startsWith('FireRed 已完成，但')) { setSaveProblem(problem); setMessage(problem); setError(true); return }
           setMessage('ComfyUI connection lost. Waiting to reconnect and recover this edit…'); setError(false)
         }
       }
@@ -158,7 +158,7 @@ export function PhotoEditWorkspace({ url, info, connected, outputDirectory, inco
     try {
       const picked = await window.minimax.chooseMedia('image')
       if (!picked) return
-      setSource({ ...picked, kind: 'image' }); setResult(null); setJob(null); setSaveProblem(''); setMessage('Source image ready. Describe the change you want.'); setError(false)
+      setSource({ ...picked, kind: 'image' }); setResult(null); setJob(null); setSaveProblem(''); setMessage('源图像已就绪。请描述你想要的修改。'); setError(false)
     } catch (reason) { setMessage(reason instanceof Error ? reason.message : String(reason)); setError(true) }
   }
   const chooseReference = async (index: number) => {
@@ -176,7 +176,7 @@ export function PhotoEditWorkspace({ url, info, connected, outputDirectory, inco
   const removeReference = (index: number) => {
     setReferences(current => current.filter((_, at) => at !== index))
     setResult(null)
-    setMessage('Reference removed. Review the image numbers in your instruction before rendering again.')
+    setMessage('参考图已移除。重新渲染前，请检查指令中的图像编号。')
     setError(false)
   }
   const render = async () => {
@@ -198,43 +198,43 @@ export function PhotoEditWorkspace({ url, info, connected, outputDirectory, inco
   }
   const cancel = async () => {
     if (!job) return
-    if (saveProblem) { setJob(null); setSaveProblem(''); setMessage('Save retry dismissed. The finished image remains in ComfyUI output.'); setError(false); return }
-    try { await window.minimax.cancelPrompt(job.url, job.id); setJob(null); setMessage('Photo edit cancelled.'); setError(false) }
+    if (saveProblem) { setJob(null); setSaveProblem(''); setMessage('已取消保存重试。完成的图像仍保留在 ComfyUI 输出中。'); setError(false); return }
+    try { await window.minimax.cancelPrompt(job.url, job.id); setJob(null); setMessage('照片编辑已取消。'); setError(false) }
     catch (reason) { setMessage(`Could not cancel: ${reason instanceof Error ? reason.message : String(reason)}`); setError(true) }
   }
   const chooseExistingResult = async () => {
     try {
       const picked = await window.minimax.chooseMedia('image')
       if (!picked) return
-      setResult({ ...picked, kind: 'image' }); setJob(null); setSaveProblem(''); setMessage('Edited image ready to send to Ripple.'); setError(false)
+      setResult({ ...picked, kind: 'image' }); setJob(null); setSaveProblem(''); setMessage('编辑后的图像已就绪，可发送至 Ripple。'); setError(false)
     } catch (reason) { setMessage(reason instanceof Error ? reason.message : String(reason)); setError(true) }
   }
-  const reset = () => { setSource(null); setReferences([]); setPrompt(''); setMode('turbo'); setResolution(defaultFrameResolution); setResult(null); setJob(null); setSaveProblem(''); setSeed(Math.floor(Math.random() * 1_000_000_000)); setMessage('Photo edit cleared.'); setError(false) }
+  const reset = () => { setSource(null); setReferences([]); setPrompt(''); setMode('turbo'); setResolution(defaultFrameResolution); setResult(null); setJob(null); setSaveProblem(''); setSeed(Math.floor(Math.random() * 1_000_000_000)); setMessage('照片编辑已清除。'); setError(false) }
 
   return <div className="photo-edit-workspace">
     <header className="photo-edit-heading"><div><span className="photo-edit-eyebrow">CREATE · FIRERED IMAGE EDIT</span><h1>Photo Edit</h1><p>Start with a photo, describe one change, then use the result as Ripple’s replacement frame.</p></div><button type="button" className="photo-edit-reset" onClick={reset} disabled={busy}><RotateCcw size={15}/>Reset</button></header>
     <div className="photo-edit-grid">
       <div className="photo-edit-left">
-        <section className="photo-edit-card"><div className="photo-edit-card-heading"><span>01</span><div><h2>Image 1 · Source photo</h2><p>The frame you want to change.</p></div></div><button className="photo-edit-image-picker" type="button" onClick={() => void chooseSource()} disabled={busy}>{sourceUrl ? <img src={sourceUrl} alt="Image 1 source photo for FireRed edit" onLoad={event => setSourceSize({ width: event.currentTarget.naturalWidth, height: event.currentTarget.naturalHeight })}/> : <span><ImagePlus size={31}/><strong>Choose a photo</strong><small>Or send frame 0 from Ripple</small></span>}</button>{source && <div className="photo-edit-file"><span title={source.path}>{source.name}</span><button type="button" onClick={() => void chooseSource()} disabled={busy}>Replace</button></div>}<FrameResolutionControl source={sourceSize} value={resolution} onChange={setResolution} disabled={busy}/></section>
+        <section className="photo-edit-card"><div className="photo-edit-card-heading"><span>01</span><div><h2>Image 1 · Source photo</h2><p>The frame you want to change.</p></div></div><button className="photo-edit-image-picker" type="button" onClick={() => void chooseSource()} disabled={busy}>{sourceUrl ? <img src={sourceUrl} alt="图像 1：FireRed 编辑的源照片" onLoad={event => setSourceSize({ width: event.currentTarget.naturalWidth, height: event.currentTarget.naturalHeight })}/> : <span><ImagePlus size={31}/><strong>Choose a photo</strong><small>Or send frame 0 from Ripple</small></span>}</button>{source && <div className="photo-edit-file"><span title={source.path}>{source.name}</span><button type="button" onClick={() => void chooseSource()} disabled={busy}>Replace</button></div>}<FrameResolutionControl source={sourceSize} value={resolution} onChange={setResolution} disabled={busy}/></section>
         <section className="photo-edit-card"><div className="photo-edit-card-heading"><span>02</span><div><h2>References &amp; edit</h2><p>Image 1 is the source above. Add up to two references for identity, clothing, objects, or style.</p></div></div>
-          <div className="photo-edit-references" aria-label="FireRed reference images">
+          <div className="photo-edit-references" aria-label="FireRed 参考图像">
             {references.map((file, index) => <ReferenceImage key={`${index}-${file.path}`} file={file} number={index + 2} disabled={busy} onReplace={() => void chooseReference(index)} onRemove={() => removeReference(index)}/>)}
             {references.length < 2 && <button type="button" className="photo-edit-add-reference" onClick={() => void chooseReference(references.length)} disabled={busy}><ImagePlus size={17}/>Add Image {references.length + 2} reference <span>Optional</span></button>}
           </div>
-          <label className="photo-edit-prompt" htmlFor="fire-red-prompt">What should change?<textarea id="fire-red-prompt" value={prompt} onChange={event => setPrompt(event.target.value)} rows={5} disabled={busy} placeholder="Keep Image 1's pose and background. Use the jacket from Image 2 and the hat from Image 3." /></label><small className="photo-edit-hint">Refer to Image 1, Image 2, and Image 3 by number. Image 1 sets the output framing and resolution.</small></section>
+          <label className="photo-edit-prompt" htmlFor="fire-red-prompt">What should change?<textarea id="fire-red-prompt" value={prompt} onChange={event => setPrompt(event.target.value)} rows={5} disabled={busy} placeholder="保留图像 1's pose and background. Use the jacket from Image 2 and the hat from Image 3." /></label><small className="photo-edit-hint">Refer to Image 1, Image 2, and Image 3 by number. Image 1 sets the output framing and resolution.</small></section>
       </div>
       <div className="photo-edit-right">
         <section className="photo-edit-card photo-edit-result">
-          <div className="photo-edit-card-heading"><span>03</span><div><h2>Edited frame</h2><p>Review it before sending it to Ripple.</p></div></div>
-          <div className="photo-edit-result-stage">{resultUrl ? <img src={resultUrl} alt="FireRed edited frame" onLoad={event => setResultSize({ width: event.currentTarget.naturalWidth, height: event.currentTarget.naturalHeight })}/> : busy ? <div className="photo-edit-placeholder" role="status"><LoaderCircle className="photo-edit-spin" size={30}/><strong>{message || 'Editing in ComfyUI…'}</strong></div> : <div className="photo-edit-placeholder"><Sparkles size={30}/><strong>Your edited photo appears here</strong><span>Choose a source and describe the change.</span><button type="button" className="photo-edit-secondary" onClick={() => void chooseExistingResult()}>Choose existing edited image</button></div>}</div>
+          <div className="photo-edit-card-heading"><span>03</span><div><h2>编辑后的帧</h2><p>Review it before sending it to Ripple.</p></div></div>
+          <div className="photo-edit-result-stage">{resultUrl ? <img src={resultUrl} alt="FireRed 编辑后的帧" onLoad={event => setResultSize({ width: event.currentTarget.naturalWidth, height: event.currentTarget.naturalHeight })}/> : busy ? <div className="photo-edit-placeholder" role="status"><LoaderCircle className="photo-edit-spin" size={30}/><strong>{message || 'Editing in ComfyUI…'}</strong></div> : <div className="photo-edit-placeholder"><Sparkles size={30}/><strong>Your edited photo appears here</strong><span>Choose a source and describe the change.</span><button type="button" className="photo-edit-secondary" onClick={() => void chooseExistingResult()}>选择已有的编辑图像</button></div>}</div>
           {result && resultUrl && <div className="photo-edit-result-actions"><span className="photo-edit-result-size">{resultSize ? `${resultSize.width} × ${resultSize.height}` : 'Reading image size…'}</span><a href={resultUrl} download={result.name} className="photo-edit-secondary">Save image</a><button type="button" className="photo-edit-use" disabled={!resultSize} onClick={() => { if (resultSize) onUseRipple(result, resultSize) }}><Check size={16}/>Use as Ripple replacement<ArrowRight size={16}/></button></div>}
         </section>
         <section className="photo-edit-card photo-edit-run">
-          <div className="photo-edit-engine"><span className={missing.length ? 'photo-edit-engine-dot missing' : 'photo-edit-engine-dot'} /><span>{missing.length ? 'Setup needed' : `FireRed ready · ${mode === 'turbo' ? '8-step Turbo' : '40-step Quality'}`}</span></div>
-          <fieldset className="photo-edit-mode" disabled={busy}><legend>Render mode</legend><label className={mode === 'turbo' ? 'selected' : ''}><input type="radio" name="photo-edit-mode" checked={mode === 'turbo'} onChange={() => setMode('turbo')}/>Turbo <small>8 steps · Lightning LoRA</small></label><label className={mode === 'quality' ? 'selected' : ''}><input type="radio" name="photo-edit-mode" checked={mode === 'quality'} onChange={() => setMode('quality')}/>Quality <small>40 steps · no LoRA</small></label></fieldset>
+          <div className="photo-edit-engine"><span className={missing.length ? 'photo-edit-engine-dot missing' : 'photo-edit-engine-dot'} /><span>{missing.length ? '需要设置' : `FireRed ready · ${mode === 'turbo' ? '8-step Turbo' : '40-step Quality'}`}</span></div>
+          <fieldset className="photo-edit-mode" disabled={busy}><legend>渲染模式</legend><label className={mode === 'turbo' ? 'selected' : ''}><input type="radio" name="photo-edit-mode" checked={mode === 'turbo'} onChange={() => setMode('turbo')}/>Turbo <small>8 steps · Lightning LoRA</small></label><label className={mode === 'quality' ? 'selected' : ''}><input type="radio" name="photo-edit-mode" checked={mode === 'quality'} onChange={() => setMode('quality')}/>Quality <small>40 steps · no LoRA</small></label></fieldset>
           {missing.length > 0 && <div className="photo-edit-setup" role="status">{missing.map(item => <p key={item}>{item}</p>)}<a href="https://huggingface.co/FireRedTeam/FireRed-Image-Edit-1.1-ComfyUI" target="_blank" rel="noreferrer">Get official FireRed models <ArrowRight size={13}/></a></div>}
           {message && <p className={error ? 'photo-edit-message error' : 'photo-edit-message'} role={error ? 'alert' : 'status'} aria-live="polite">{message}</p>}
-          <div className="photo-edit-run-actions"><button type="button" className="photo-edit-generate" onClick={() => void render()} disabled={Boolean(job) || preparing || !source || !outputSize || !prompt.trim() || missing.length > 0}>{busy ? <LoaderCircle className="photo-edit-spin" size={17}/> : <Sparkles size={17}/>} {busy ? 'Editing photo…' : 'Edit photo'}</button>{saveProblem && <button type="button" className="photo-edit-secondary" onClick={() => { setSaveProblem(''); setMessage('Retrying the save…'); setError(false) }}>Retry save</button>}{job && <button type="button" className="photo-edit-secondary" onClick={() => void cancel()}><X size={15}/>{saveProblem ? 'Dismiss' : 'Cancel'}</button>}</div>
+          <div className="photo-edit-run-actions"><button type="button" className="photo-edit-generate" onClick={() => void render()} disabled={Boolean(job) || preparing || !source || !outputSize || !prompt.trim() || missing.length > 0}>{busy ? <LoaderCircle className="photo-edit-spin" size={17}/> : <Sparkles size={17}/>} {busy ? 'Editing photo…' : '编辑照片'}</button>{saveProblem && <button type="button" className="photo-edit-secondary" onClick={() => { setSaveProblem(''); setMessage('Retrying the save…'); setError(false) }}>重试保存</button>}{job && <button type="button" className="photo-edit-secondary" onClick={() => void cancel()}><X size={15}/>{saveProblem ? 'Dismiss' : 'Cancel'}</button>}</div>
           <button type="button" className="photo-edit-back" onClick={onOpenRipple}><ArrowLeft size={15}/>Back to Ripple</button>
         </section>
       </div>

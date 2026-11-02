@@ -3,11 +3,11 @@ import { rippleFramesForSeconds } from './ltxRippleWorkflow'
 export type RippleChunk = { index: number; startFrame: number; sourceFrames: number; outputFrames: number; overlapFrames: number }
 
 export function planRippleChunks(duration: number, chunkSeconds: number, overlapSeconds: number): RippleChunk[] {
-  if (!Number.isFinite(duration) || duration < 2 || duration > 300) throw new Error('Long Ripple mode supports source clips from 2 seconds to 5 minutes.')
+  if (!Number.isFinite(duration) || duration < 2 || duration > 300) throw new Error('长 Ripple 模式支持 2 秒到 5 分钟的源片段。')
   const outputFrames = rippleFramesForSeconds(chunkSeconds)
   const chunkSourceFrames = outputFrames - 1
   const overlapFrames = Math.round(overlapSeconds * 24)
-  if (!Number.isFinite(overlapSeconds) || overlapFrames < 0 || overlapFrames > 48 || overlapFrames >= chunkSourceFrames / 2) throw new Error('Choose an overlap from 0 to 2 seconds, shorter than half a chunk.')
+  if (!Number.isFinite(overlapSeconds) || overlapFrames < 0 || overlapFrames > 48 || overlapFrames >= chunkSourceFrames / 2) throw new Error('选择 0 到 2 秒之间的重叠时长，需短于半个片段。')
   const totalSourceFrames = Math.ceil(Math.round(duration * 24) / 8) * 8
   const chunks: RippleChunk[] = []
   let startFrame = 0
@@ -19,7 +19,7 @@ export function planRippleChunks(duration: number, chunkSeconds: number, overlap
     chunks.push({ index: chunks.length, startFrame, sourceFrames, outputFrames: sourceFrames + 1, overlapFrames: chunks.length ? overlapFrames : 0 })
     if (startFrame + sourceFrames >= totalSourceFrames) break
     startFrame += sourceFrames - overlapFrames
-    if (chunks.length > 100) throw new Error('This clip needs too many Ripple chunks. Increase chunk length.')
+    if (chunks.length > 100) throw new Error('此片段需要过多的 Ripple 片段，请增加片段长度。')
   }
   return chunks
 }

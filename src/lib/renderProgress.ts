@@ -38,24 +38,24 @@ export function samplerPassForNode(nodeId: string, nodeType?: string): Generatio
 
 export function nodeStageLabel(nodeType: string | undefined, nodeId: string) {
   const h3Stages: Record<string, string> = {
-    '161': 'Preparing motion context', '170': 'Loading source video for continuation',
-    '1701': 'Loading source audio for continuation', '171': 'Trimming continuity overlap',
-    '172': 'Merging source and new beat', '173': 'Encoding new beat',
-    '174': 'Saving new beat', '190': 'Saving reusable motion context',
+    '161': '正在准备动作上下文', '170': '加载续写源视频',
+        '1701': '加载续写源音频', '171': '裁剪连续性重叠',
+        '172': '合并源与新拍', '173': '编码新拍',
+        '174': '保存新拍', '190': '保存可复用动作上下文',
   }
   if (h3Stages[nodeId]) return h3Stages[nodeId]
-  if (!nodeType) return `Running node ${nodeId}`
-  if (/^UNETLoader$/i.test(nodeType)) return 'Loading diffusion model'
-  if (/^(CLIPLoader|DualCLIPLoader)$/i.test(nodeType)) return 'Loading text encoder'
-  if (/ModelAttentionBackend|SolAttnH3|MiniMaxH3AttentionParallel/i.test(nodeType)) return 'Applying attention backend'
-  if (/LoraLoader/i.test(nodeType)) return 'Applying LoRA adapters'
-  if (/MiniMaxH3.*(?:Reference|Image)ToVideo/i.test(nodeType)) return 'Preparing H3 conditioning and references'
-  if (/MinimaxH3LatentUpscaler3DRefineHandoff/i.test(nodeType)) return 'Upscaling and refining H3 latent'
-  if (/SamplerCustomAdvanced|KSampler$/i.test(nodeType)) return 'Starting sampler'
-  if (/VAEDecode/i.test(nodeType)) return 'Decoding video frames'
-  if (/CreateVideo/i.test(nodeType)) return 'Encoding video and audio'
-  if (/Save(?:Video|Image|Audio)/i.test(nodeType)) return 'Saving output'
-  return `Processing ${nodeType}`
+  if (!nodeType) return `正在运行节点 ${nodeId}`
+  if (/^UNETLoader$/i.test(nodeType)) return '加载扩散模型'
+  if (/^(CLIPLoader|DualCLIPLoader)$/i.test(nodeType)) return '加载文本编码器'
+  if (/ModelAttentionBackend|SolAttnH3|MiniMaxH3AttentionParallel/i.test(nodeType)) return '应用注意力后端'
+  if (/LoraLoader/i.test(nodeType)) return '应用 LoRA 适配器'
+  if (/MiniMaxH3.*(?:Reference|Image)ToVideo/i.test(nodeType)) return '准备 H3 条件与参考素材'
+  if (/MinimaxH3LatentUpscaler3DRefineHandoff/i.test(nodeType)) return '上采样并精修 H3 潜空间'
+  if (/SamplerCustomAdvanced|KSampler$/i.test(nodeType)) return '启动采样器'
+  if (/VAEDecode/i.test(nodeType)) return '解码视频帧'
+  if (/CreateVideo/i.test(nodeType)) return '编码视频与音频'
+  if (/Save(?:Video|Image|Audio)/i.test(nodeType)) return '保存输出'
+  return `正在处理 ${nodeType}`
 }
 
 export function samplerProgressSummary(job: GenerationJob | undefined, now: number) {

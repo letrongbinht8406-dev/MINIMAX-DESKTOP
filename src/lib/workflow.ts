@@ -70,14 +70,14 @@ export function buildMiniMaxWorkflow(
 ): ComfyPrompt {
   if (options.turbo === 'fast' && options.mode !== 'text') throw new Error('FastVideo FastH3 supports text-to-audio-video only. Use the base MiniMax H3 model for image, first/last-frame, or reference generation.')
   const scene = options.sceneState
-  if (!Number.isFinite(options.duration) || options.duration <= 0 || options.duration > 15) throw new Error('Clip duration must be greater than 0 and no longer than 15 seconds.')
+  if (!Number.isFinite(options.duration) || options.duration <= 0 || options.duration > 15) throw new Error('片段时长必须大于 0 且不超过 15 秒。')
   const compiled = scene ? compileScene(scene) : undefined
   if (!options.ignoreSceneConflicts && compiled?.conflicts.some(item => item.severity === 'error')) throw new Error(compiled.conflicts.filter(item => item.severity === 'error').map(item => item.message).join('\n'))
   if (scene) {
-    if (scene.mode !== options.mode || scene.duration !== options.duration) throw new Error('Scene mode and duration must match the render payload.')
+    if (scene.mode !== options.mode || scene.duration !== options.duration) throw new Error('场景模式和时长必须与渲染数据匹配。')
     const counts = { image: uploads.images.length, video: uploads.videos.length, audio: uploads.audios.length }
-    if (options.mode === 'reference' && Object.entries(counts).some(([kind, count]) => scene.references.filter(ref => ref.file.kind === kind).length !== count)) throw new Error('Reference upload order/count differs from the compiled scene.')
-    if (options.mode !== 'reference' && (Boolean(uploads.first) !== scene.references.some(ref => ref.anchor === 'opening') || Boolean(uploads.last) !== scene.references.some(ref => ref.anchor === 'ending'))) throw new Error('Frame uploads differ from the compiled scene anchors.')
+    if (options.mode === 'reference' && Object.entries(counts).some(([kind, count]) => scene.references.filter(ref => ref.file.kind === kind).length !== count)) throw new Error('参考图上传顺序/数量与编译后的场景不一致。')
+    if (options.mode !== 'reference' && (Boolean(uploads.first) !== scene.references.some(ref => ref.anchor === 'opening') || Boolean(uploads.last) !== scene.references.some(ref => ref.anchor === 'ending'))) throw new Error('帧上传与编译后的场景锚点不一致。')
   }
   const prompt: ComfyPrompt = {}
   const routed = options.gpuRouting
@@ -330,7 +330,7 @@ export function buildMiniMaxWorkflow(
     prompt['84'] = { class_type: 'SaveVideo', inputs: { video: ['83', 0], filename_prefix: `${options.filenamePrefix}_RTX_AI_2x`, format: 'auto', 'format.codec': 'auto' } }
   }
   if (options.continuationAssembly) {
-    if (!uploads.source) throw new Error('Continuation assembly requires the completed source video upload.')
+    if (!uploads.source) throw new Error('续接组装需要已完成源视频的上传。')
     const previousFrames = addLoader(prompt, '170', 'video', uploadedName(uploads.source))
     const trimFrames: number | Link = options.continuationAssembly.useMotionTrim && options.motionContext
       ? ['161', 1]

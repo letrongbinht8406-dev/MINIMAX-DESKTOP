@@ -9,12 +9,12 @@ export function auditH3Prompt(prompt: string, input: { mode: GenerationMode; dur
   const warnings: string[] = []
   const suggestions: string[] = []
   const text = prompt.trim()
-  if (!text) errors.push('Add a shot direction before rendering.')
-  if (text.length > 12000) errors.push('Prompt is too long for a reliable single-shot render. Split the action into smaller shots.')
+  if (!text) errors.push('渲染前请先添加镜头方向。')
+  if (text.length > 12000) errors.push('提示词过长，无法可靠地单次渲染。请将动作拆分为更小的镜头。')
   const cameras = (text.match(/\b(?:camera|lens|shot|camera angle)\s*:/gi) ?? []).length
-  if (cameras > 5) warnings.push('Several camera instructions compete in one shot. Keep one primary move and one framing decision.')
-  if (/\b(?:then|after that|next)\b/gi.test(text) && input.duration <= 5) warnings.push('This short render contains several sequential beats. Reduce it to one clear action and one camera move.')
-  if (input.noDialogue && /(?:<d>|\b(?:says|dialogue|speaks|whispers|narrat))/i.test(text)) errors.push('No dialogue is enabled, but the direction includes speech or dialogue. Remove it or disable No dialogue.')
+  if (cameras > 5) warnings.push('一个镜头中存在多个相互冲突的摄影机指令。请保留一个主要运镜和一个构图决定。')
+  if (/\b(?:then|after that|next)\b/gi.test(text) && input.duration <= 5) warnings.push('此短渲染包含多个连续节拍。请将其精简为一个明确动作和一个镜头运动。')
+  if (input.noDialogue && /(?:<d>|\b(?:says|dialogue|speaks|whispers|narrat))/i.test(text)) errors.push('已启用"无对白"，但导演说明中包含对白或台词。请移除相关内容或关闭"无对白"选项。')
   const counts = { Picture: input.imageCount ?? input.bindings?.length ?? 0, Video: input.videoCount ?? 0, Audio: input.audioCount ?? 0 }
   const used = new Set<string>()
   for (const match of text.matchAll(referenceToken)) {
@@ -23,11 +23,11 @@ export function auditH3Prompt(prompt: string, input: { mode: GenerationMode; dur
     used.add(`${kind}:${index}`)
     if (index < 1 || index > counts[kind]) errors.push(`<${kind} ${index}> does not match an attached ${kind.toLowerCase()} reference.`)
   }
-  if (input.mode === 'reference' && counts.Picture + counts.Video + counts.Audio === 0) errors.push('Reference mode needs at least one image or video reference.')
-  if (input.mode === 'reference' && counts.Audio && !counts.Picture && !counts.Video) errors.push('Audio references need at least one visual reference.')
-  if (input.mode === 'reference' && counts.Picture && ![...used].some((item) => item.startsWith('Picture:'))) suggestions.push('Name each important picture reference in the direction so its role remains explicit.')
+  if (input.mode === 'reference' && counts.Picture + counts.Video + counts.Audio === 0) errors.push('参考模式至少需要一个图像或视频参考。')
+  if (input.mode === 'reference' && counts.Audio && !counts.Picture && !counts.Video) errors.push('音频参考至少需要一个视觉参考。')
+  if (input.mode === 'reference' && counts.Picture && ![...used].some((item) => item.startsWith('图片：'))) suggestions.push('请在导演说明中为每张图片参考命名，以明确其用途。')
   if (input.mode === 'image') suggestions.push('Treat the first frame as the exact opening composition; describe only the motion that follows it.')
-  if (input.mode === 'frames') suggestions.push('Describe one physically continuous transition between the opening and ending frames.')
+  if (input.mode === 'frames') suggestions.push('请描述开场帧与结尾帧之间一个物理上连续的过渡。')
   return { errors: [...new Set(errors)], warnings: [...new Set(warnings)], suggestions: [...new Set(suggestions)] }
 }
 

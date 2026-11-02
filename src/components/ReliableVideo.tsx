@@ -5,7 +5,7 @@ type Props = Omit<ComponentProps<'video'>, 'ref'> & {
   recoveryHint?: string
 }
 
-export function ReliableVideo({ src, videoRef, recoveryHint = 'Check that the file still exists, or try an MP4 with H.264 video and AAC audio.', onError, onWaiting, onStalled, onCanPlay, onPlaying, ...props }: Props) {
+export function ReliableVideo({ src, videoRef, recoveryHint = '请确认文件仍存在，或改用 H.264 视频 + AAC 音频的 MP4。', onError, onWaiting, onStalled, onCanPlay, onPlaying, ...props }: Props) {
   const [failure, setFailure] = useState('')
   const [buffering, setBuffering] = useState(false)
   const [attempt, setAttempt] = useState(0)
@@ -15,10 +15,10 @@ export function ReliableVideo({ src, videoRef, recoveryHint = 'Check that the fi
   return <>
     <video {...props} key={`${src}:${attempt}`} src={src} ref={videoRef} onError={event => {
       const code = event.currentTarget.error?.code
-      setFailure(code === 2 ? 'The video file could not be read.' : code === 3 ? 'The video codec could not be decoded.' : code === 4 ? 'This video format is not supported.' : 'This video could not be played.')
+      setFailure(code === 2 ? '无法读取该视频文件。' : code === 3 ? '无法解码该视频编码。' : code === 4 ? '不支持该视频格式。' : '无法播放该视频。')
       setBuffering(false)
       onError?.(event)
     }} onWaiting={event => { setBuffering(true); onWaiting?.(event) }} onStalled={event => { setBuffering(true); onStalled?.(event) }} onCanPlay={event => { setBuffering(false); setFailure(''); onCanPlay?.(event) }} onPlaying={event => { setBuffering(false); onPlaying?.(event) }} />
-    {failure ? <p className="media-playback-feedback error" role="alert">{failure} {recoveryHint} <button type="button" onClick={() => { setFailure(''); setBuffering(false); setAttempt(value => value + 1) }}>Retry playback</button></p> : buffering ? <p className="media-playback-feedback" role="status" aria-live="polite">Buffering video…</p> : null}
+    {failure ? <p className="media-playback-feedback error" role="alert">{failure} {recoveryHint} <button type="button" onClick={() => { setFailure(''); setBuffering(false); setAttempt(value => value + 1) }}>重试播放</button></p> : buffering ? <p className="media-playback-feedback" role="status" aria-live="polite">视频缓冲中…</p> : null}
   </>
 }

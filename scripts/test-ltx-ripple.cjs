@@ -19,7 +19,7 @@ assert.equal(chunks[0].sourceFrames, 240)
 assert.equal(chunks[1].startFrame, 216)
 assert.equal(chunks[1].overlapFrames, 24)
 assert.ok(chunks.at(-1).startFrame + chunks.at(-1).sourceFrames >= 60 * 24)
-assert.throws(() => planRippleChunks(301, 10, 1), /5 minutes/)
+assert.throws(() => planRippleChunks(301, 10, 1), /5 分钟/)
 const shortTail = planRippleChunks(11, 10, 2)
 assert.equal(shortTail.at(-1).sourceFrames, 104, 'A short final chunk stays longer than twice its overlap')
 for (const chunkLength of [5, 10, 15]) for (const overlap of [0, 1 / 3, 2 / 3, 1, 2]) for (const duration of [5.1, 10.1, 11, 15.1, 20.1, 60.1, 299.9]) {

@@ -196,14 +196,14 @@ assert.equal(graph['602'].class_type, 'MiniMaxH3AddGuide')
 assert.equal(graph['602'].inputs.frame_idx, 0)
 assert.deepEqual(clone(graph['12'].inputs.conditioning), ['602',0])
 assert.equal(graph['10'].inputs.prompt, compileScene(state).prompt)
-assert.throws(()=>buildMiniMaxWorkflow(options,models,{...uploads,images:[]}), /upload order\/count/)
+assert.throws(()=>buildMiniMaxWorkflow(options,models,{...uploads,images:[]}), /参考图上传顺序/)
 const conflicting = clone(state)
 conflicting.continuity.exactFrame = true
 conflicting.references = conflicting.references.map(ref => ({ ...ref, anchor: undefined }))
 const overrideOptions = { ...options, sceneState: conflicting }
-assert.throws(() => buildMiniMaxWorkflow(overrideOptions, models, uploads), /Frame 0 anchor/)
+assert.throws(() => buildMiniMaxWorkflow(overrideOptions, models, uploads), /需要 Frame-0 续接/)
 assert.equal(buildMiniMaxWorkflow({ ...overrideOptions, ignoreSceneConflicts: true }, models, uploads)['10'].inputs.prompt, compileScene(conflicting).prompt)
-assert.throws(() => buildMiniMaxWorkflow({ ...overrideOptions, ignoreSceneConflicts: true }, models, { ...uploads, images: [] }), /upload order\/count/, 'Override must not bypass transport validation')
+assert.throws(() => buildMiniMaxWorkflow({ ...overrideOptions, ignoreSceneConflicts: true }, models, { ...uploads, images: [] }), /参考图上传顺序/, 'Override must not bypass transport validation')
 const manualOnly = createSceneState('', 5)
 manualOnly.view = 'manual'; manualOnly.manualPrompt = 'A leaf falls.'
 assert.ok(!errors(manualOnly).some(item => item.code === 'empty-scene'))

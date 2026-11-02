@@ -15,7 +15,7 @@ export function continuationSourceState(job: GenerationJob): ScenePromptState {
   const sourceFiles = state.references.length ? state.references.map(ref => ref.file) : files
   const named = [...new Set(sourceFiles.map(file => file.name.match(/^Character:\s*([^/]+?)(?:\s*\/|$)/i)?.[1]?.trim()).filter((name): name is string => Boolean(name)))]
   const subjectFiles = sourceFiles.filter(file => file.referenceRole === 'subject')
-  const soleName = named.length === 1 ? named[0] : named.length === 0 && subjectFiles.length === 1 ? 'Source character' : undefined
+  const soleName = named.length === 1 ? named[0] : named.length === 0 && subjectFiles.length === 1 ? '源角色' : undefined
   const names = named.length ? named : soleName ? [soleName] : []
   state.characters = [...state.characters, ...names.filter(name => !state.characters.some(character => character.name.toLocaleLowerCase() === name.toLocaleLowerCase())).map(name => ({ id: `legacy-character:${encodeURIComponent(name.toLocaleLowerCase())}`, name, attributes: {}, source: 'CHARACTER' as const }))]
   const existingReferences = new Map(state.references.map(ref => [ref.file.path, ref]))
@@ -91,7 +91,7 @@ export function continuationLongestSequence(script: ContinueScript, beatJobs: Ma
 }
 
 export function continuationOutputStem(script: ContinueScript, target: ContinueBeat) {
-  const video = continuationFilenamePart(script.videoName, 'Untitled-Video')
+  const video = continuationFilenamePart(script.videoName, '未命名视频')
   const lineage = continuationLineage(script, target)
   // Keep every beat visible while staying below common filesystem component
   // limits. Longer scripts shorten each label evenly instead of dropping
@@ -105,7 +105,7 @@ export function continuationOutputStem(script: ContinueScript, target: ContinueB
 }
 
 export function continuationOutputName(script: ContinueScript, target: ContinueBeat) {
-  const video = continuationFilenamePart(script.videoName, 'Untitled-Video')
+  const video = continuationFilenamePart(script.videoName, '未命名视频')
   const lineage = continuationOutputStem(script, target)
   const filename = script.beats.at(-1)?.id === target.id ? `Final_${lineage}` : lineage
   return `continuations/${video}/${filename}`

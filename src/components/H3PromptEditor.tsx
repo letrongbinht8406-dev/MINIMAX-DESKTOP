@@ -44,7 +44,7 @@ function existingTag(value: string, tag: string) {
   return match ? { start: match.index, end: match.index + match[0].length } : null
 }
 
-export const H3PromptEditor = forwardRef<H3PromptEditorHandle, H3PromptEditorProps>(function H3PromptEditor({ value, onChange, ariaLabel = 'Video prompt', placeholder, completion = '', onAcceptCompletion, idPrefix = 'h3-prompt', productionMenu, onProductionCommandChange, onProductionCommandKeyDown }, forwardedRef) {
+export const H3PromptEditor = forwardRef<H3PromptEditorHandle, H3PromptEditorProps>(function H3PromptEditor({ value, onChange, ariaLabel = '视频提示词', placeholder, completion = '', onAcceptCompletion, idPrefix = 'h3-prompt', productionMenu, onProductionCommandChange, onProductionCommandKeyDown }, forwardedRef) {
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const [trigger, setTrigger] = useState<{ start: number; query: string } | null>(null)
   const [active, setActive] = useState(0)
@@ -123,15 +123,15 @@ export const H3PromptEditor = forwardRef<H3PromptEditorHandle, H3PromptEditorPro
 
   return <div className="h3-prompt-editor">
     <textarea ref={textareaRef} aria-label={ariaLabel} aria-autocomplete="list" aria-expanded={Boolean(trigger || productionMenu)} aria-controls={trigger ? `${idPrefix}-tag-options` : productionMenu?.id} aria-activedescendant={trigger && matches[active] ? `${idPrefix}-tag-${matches[active].tag.slice(2)}` : productionMenu?.activeId} value={value} onChange={event => { onChange(event.target.value); updateTrigger(event.currentTarget) }} onClick={event => updateTrigger(event.currentTarget)} onKeyUp={event => { if (!['ArrowDown', 'ArrowUp', 'Enter', 'Tab', 'Escape'].includes(event.key)) updateTrigger(event.currentTarget) }} onKeyDown={handleKeyDown} onBlur={event => { if (!event.currentTarget.parentElement?.contains(event.relatedTarget as Node | null)) setTrigger(null) }} onContextMenu={event => { event.preventDefault(); textareaRef.current?.setSelectionRange(event.currentTarget.selectionStart, event.currentTarget.selectionEnd); setTrigger(null); onProductionCommandChange?.(null); setContextMenu({ x: event.clientX, y: event.clientY }) }} placeholder={placeholder} />
-    {trigger && <div id={`${idPrefix}-tag-options`} className="h3-tag-autocomplete" role="listbox" aria-label="Prompt tags">
-      <div className="h3-tag-autocomplete-title"><Hash size={13} /><span>{matches.length ? 'Insert prompt tag' : 'No matching prompt tag'}</span><kbd>Esc</kbd></div>
-      {matches.map((item, index) => <button type="button" id={`${idPrefix}-tag-${item.tag.slice(2)}`} role="option" aria-selected={index === active} className={index === active ? 'active' : ''} key={item.tag} onMouseDown={event => event.preventDefault()} onMouseEnter={() => setActive(index)} onClick={() => insertTag(item, true)}><code>{item.tag}</code><span>{item.description}</span>{existingTag(value, item.tag) && <em><Check size={11} />Added</em>}</button>)}
-      {matches.length > 0 && <footer><span>↑↓ choose</span><span>Enter or Tab insert</span></footer>}
+    {trigger && <div id={`${idPrefix}-tag-options`} className="h3-tag-autocomplete" role="listbox" aria-label="提示词标签">
+      <div className="h3-tag-autocomplete-title"><Hash size={13} /><span>{matches.length ? '插入提示词标签' : '无匹配标签'}</span><kbd>Esc</kbd></div>
+      {matches.map((item, index) => <button type="button" id={`${idPrefix}-tag-${item.tag.slice(2)}`} role="option" aria-selected={index === active} className={index === active ? 'active' : ''} key={item.tag} onMouseDown={event => event.preventDefault()} onMouseEnter={() => setActive(index)} onClick={() => insertTag(item, true)}><code>{item.tag}</code><span>{item.description}</span>{existingTag(value, item.tag) && <em><Check size={11} />已添加</em>}</button>)}
+      {matches.length > 0 && <footer><span>↑↓ 选择</span><span>回车或 Tab 插入</span></footer>}
     </div>}
-    {contextMenu && <div className="h3-tag-context-menu" role="menu" aria-label="Insert prompt tag" style={{ left: Math.min(contextMenu.x, window.innerWidth - 290), top: Math.min(contextMenu.y, window.innerHeight - 310) }} onPointerDown={event => event.stopPropagation()}>
-      <header><Hash size={14} /><span>Insert prompt tag</span></header>
-      {promptMarkupLegend.map(item => { const exists = existingTag(value, item.tag); return <button type="button" role="menuitem" key={item.tag} onClick={() => insertTag(item)}><code>{item.tag}</code><span>{exists ? 'Go to section' : item.description}</span>{exists ? <Check size={13} /> : <ChevronRight size={13} />}</button> })}
+    {contextMenu && <div className="h3-tag-context-menu" role="menu" aria-label="插入提示词标签" style={{ left: Math.min(contextMenu.x, window.innerWidth - 290), top: Math.min(contextMenu.y, window.innerHeight - 310) }} onPointerDown={event => event.stopPropagation()}>
+      <header><Hash size={14} /><span>插入提示词标签</span></header>
+      {promptMarkupLegend.map(item => { const exists = existingTag(value, item.tag); return <button type="button" role="menuitem" key={item.tag} onClick={() => insertTag(item)}><code>{item.tag}</code><span>{exists ? '跳转到分段' : item.description}</span>{exists ? <Check size={13} /> : <ChevronRight size={13} />}</button> })}
     </div>}
-    {completion && <button type="button" className="h3-inline-completion" onMouseDown={event => event.preventDefault()} onClick={() => { const textarea = textareaRef.current; if (textarea) onAcceptCompletion?.({ start: textarea.selectionStart, end: textarea.selectionEnd }) }}><span>Local autocomplete</span><p>{completion}</p><kbd>Tab to accept</kbd></button>}
+    {completion && <button type="button" className="h3-inline-completion" onMouseDown={event => event.preventDefault()} onClick={() => { const textarea = textareaRef.current; if (textarea) onAcceptCompletion?.({ start: textarea.selectionStart, end: textarea.selectionEnd }) }}><span>本地自动补全</span><p>{completion}</p><kbd>按 Tab 接受</kbd></button>}
   </div>
 })

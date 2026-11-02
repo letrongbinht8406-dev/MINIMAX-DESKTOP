@@ -9,7 +9,7 @@ export function importSceneDraft(prompt: string, duration: number, mode: Generat
     state.view = 'manual'
     state.manualPrompt = prompt
     const description = prompt.match(/(?:detailed_description|integrated_multimodal_description)\s*:\s*([\s\S]*?)(?=\n\s*(?:overall_soundscape|non_diegetic_music)\s*:|$)/i)?.[1]
-    state.scene = description?.trim() || 'Imported H3 direction'
+    state.scene = description?.trim() || '已导入 H3 方向'
   }
   return state
 }
@@ -32,8 +32,8 @@ export function stateFromReferenceMap(direction: string, duration: number, mode:
     }
   }
   const state = bindSceneReferences(createSceneState(direction, duration, mode), bindings, videos, audios,
-    mode === 'image' || mode === 'frames' ? { path: 'legacy-first', name: 'Opening frame', kind: 'image' } : undefined,
-    mode === 'frames' ? { path: 'legacy-last', name: 'Ending frame', kind: 'image' } : undefined)
+    mode === 'image' || mode === 'frames' ? { path: 'legacy-first', name: '起始帧', kind: 'image' } : undefined,
+    mode === 'frames' ? { path: 'legacy-last', name: '结束帧', kind: 'image' } : undefined)
   state.references = state.references.map(ref => ({ ...ref, reviewed: true }))
   state.soundscape = value('', 'DEFAULT')
   return state

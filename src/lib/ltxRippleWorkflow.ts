@@ -33,7 +33,7 @@ export function rippleFrameOptions(sourceFrames: number): number[] {
 }
 
 export function rippleFramesForSeconds(seconds: number): number {
-  if (!Number.isFinite(seconds) || seconds < 2 || seconds > 20) throw new Error('Choose a Ripple edit length between 2 and 20 seconds.')
+  if (!Number.isFinite(seconds) || seconds < 2 || seconds > 20) throw new Error('选择 2 到 20 秒之间的 Ripple 编辑时长。')
   return Math.ceil((Math.round(seconds * 24) - 1) / 8) * 8 + 1
 }
 
@@ -48,8 +48,8 @@ export function rippleSize(width: number, height: number): { width: number; heig
 export function buildLtxRippleWorkflow(options: LtxRippleOptions, models: Ltx25ModelSelection, lora: string, source: UploadedFile, editedFrame: UploadedFile): ComfyPrompt {
   if (!Number.isInteger(options.frames) || options.frames < 49 || options.frames > LTX_RIPPLE_MAX_FRAMES || (options.frames - 1) % 8 !== 0) throw new Error('Choose a supported Ripple frame count (8n + 1, up to 20 seconds).')
   if (!isValidFrameSize(options)) throw new Error('Ripple dimensions must be 256–2048 pixels and aligned to 32 pixels.')
-  if (!Number.isFinite(options.strength) || options.strength < 0.5 || options.strength > 2) throw new Error('Ripple strength must be between 0.5 and 2.')
-  if (options.guideStrength !== undefined && (!Number.isFinite(options.guideStrength) || options.guideStrength < 0 || options.guideStrength > 1)) throw new Error('Motion guide strength must be between 0 and 1.')
+  if (!Number.isFinite(options.strength) || options.strength < 0.5 || options.strength > 2) throw new Error('Ripple 强度必须在 0.5 到 2 之间。')
+  if (options.guideStrength !== undefined && (!Number.isFinite(options.guideStrength) || options.guideStrength < 0 || options.guideStrength > 1)) throw new Error('运动引导强度必须在 0 到 1 之间。')
   const graph: ComfyPrompt = {}
   const model = addRoutedLoader(graph, '1', 'UNETLoader', { unet_name: models.diffusion, weight_dtype: 'default' })
   const clip = addRoutedLoader(graph, '2', 'CLIPLoader', { clip_name: models.textEncoder, type: 'ltxv', device: 'default' })

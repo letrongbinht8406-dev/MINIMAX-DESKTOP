@@ -49,7 +49,7 @@ export type ScenePromptState = {
 export const value = (text = '', source: Source = 'USER'): Value => ({ value: text, source })
 
 // Preserve the trailing space while the user is typing. Trimming each token on
-// every change makes a controlled input turn "Found footage" into
+// every change makes a controlled input turn "伪纪录片" into
 // "Foundfootage" because React renders away the space before the next keypress.
 export const parseStyleValues = (text: string): Value[] => text.split(',').map(item => value(item.replace(/^\s+/, '')))
 export function createSceneState(scene = '', duration = 5, mode: GenerationMode = 'text'): ScenePromptState {
@@ -166,8 +166,8 @@ export function suggestScene(scene: string): ScenePromptState['inferred'] {
     const found = [...cameraOptions[field]].sort((a, b) => b.length - a.length).find(option => new RegExp(`\\b${option.replaceAll('-', '[- ]')}\\b`, 'i').test(scene))
     if (found) suggestions.push({ field, value: found, evidence: found })
   }
-  if (/camera (?:backs|moves|pulls) (?:away|back|backward)/i.test(scene)) suggestions.push({ field: 'movement', value: 'Pull Out', evidence: 'camera backs away' })
-  if (/found footage/i.test(scene)) suggestions.push({ field: 'stabilization', value: 'Handheld', evidence: 'found footage' }, { field: 'behavior', value: 'Subtle handheld tremble, autofocus breathing, responsive auto-exposure and low-light sensor noise.', evidence: 'found footage' })
+  if (/camera (?:backs|moves|pulls) (?:away|back|backward)/i.test(scene)) suggestions.push({ field: 'movement', value: 'Pull Out', evidence: '镜头后拉' })
+  if (/found footage/i.test(scene)) suggestions.push({ field: 'stabilization', value: 'Handheld', evidence: '伪纪录片' }, { field: 'behavior', value: 'Subtle handheld tremble, autofocus breathing, responsive auto-exposure and low-light sensor noise.', evidence: '伪纪录片' })
   else if (/handheld/i.test(scene)) suggestions.push({ field: 'stabilization', value: 'Handheld', evidence: 'handheld' })
   return suggestions
 }

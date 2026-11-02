@@ -21,7 +21,7 @@ export type RenderEstimateRequest = Pick<RenderBenchmark, 'provider' | 'mode' | 
 export function renderHardware(gpu: GpuTelemetry | null) {
   const devices = gpu?.devices?.length ? gpu.devices : gpu?.name ? [{ name: gpu.name, vramTotalMb: gpu.vramTotalMb ?? 0 }] : []
   const parts = devices.map((device) => `${device.name}|${device.vramTotalMb ?? 0}`)
-  return { key: parts.join('::') || 'unknown-gpu', label: devices.map((device) => device.name).join(' + ') || 'Unknown GPU' }
+  return { key: parts.join('::') || 'unknown-gpu', label: devices.map((device) => device.name).join(' + ') || '未知 GPU' }
 }
 
 export function benchmarkFromJob(job: GenerationJob, gpu: GpuTelemetry | null): RenderBenchmark | null {
@@ -34,7 +34,7 @@ export function benchmarkFromJob(job: GenerationJob, gpu: GpuTelemetry | null): 
   return {
     jobId: job.id, hardwareKey: hardware.key, hardwareLabel: hardware.label,
     provider: 'minimax', mode: job.mode, turbo: job.turbo ?? 'off',
-    attention: job.execution?.attentionBackend ?? 'Unknown attention',
+    attention: job.execution?.attentionBackend ?? '未知注意力',
     width: job.renderWidth ?? job.width, height: job.renderHeight ?? job.height,
     duration: job.duration, steps: job.steps, engineMs, measuredAt: job.createdAt + job.renderDurationMs,
   }

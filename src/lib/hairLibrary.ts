@@ -6,7 +6,7 @@ export const HAIR_LIBRARY_EVENT = 'minimax-hair-library-changed'
 
 export function newHairStyleProject(index = 1): HairStyleProject {
   const now = Date.now()
-  return { id: createId(), name: `Hair design ${index}`, description: '', texture: 'natural texture', length: 'medium length', color: '', hairline: 'natural hairline', finish: 'soft natural finish', visualStyle: 'high-end salon reference photography', referencePrompt: '', createdAt: now, updatedAt: now }
+  return { id: createId(), name: `Hair design ${index}`, description: '', texture: '自然质感', length: '中等长度', color: '', hairline: '自然发际线', finish: '柔和自然效果', visualStyle: '高端沙龙参考摄影', referencePrompt: '', createdAt: now, updatedAt: now }
 }
 
 export function loadHairStyleProjects(): HairStyleProject[] {

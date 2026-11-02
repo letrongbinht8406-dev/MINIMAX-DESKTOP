@@ -40,7 +40,7 @@ export function readSavedJobs(raw: string | null): GenerationJob[] {
       comfyActivity: Array.isArray(job.comfyActivity) ? job.comfyActivity.filter((entry) => entry && typeof entry.message === 'string' && Number.isFinite(entry.at) && Number.isFinite(new Date(entry.at).getTime())) : undefined,
       ...(interrupted ? {
         error: 'The app lost this render before it received a prompt ID. Check ComfyUI queue or history before retrying to avoid a duplicate; your source and script are safe.',
-        progressLabel: 'Submission interrupted',
+        progressLabel: '提交已中断',
       } : {}),
     }]
   })

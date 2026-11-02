@@ -26,9 +26,9 @@ export function buildCharacterDialogueRequest(input: {
 }) {
   return [
     `Write dialogue for ${input.characterName}, an adult fictional character, for a ${input.duration}-second video shot.`,
-    `Character: ${input.characterDescription || 'No additional character description provided.'}`,
-    `Established voice: ${input.voiceNotes || 'Natural, believable speech.'}`,
-    `Current shot context: ${input.shotPrompt.trim() || 'No visual prompt has been written yet.'}`,
+    `Character: ${input.characterDescription || '未提供额外的角色描述。'}`,
+    `Established voice: ${input.voiceNotes || '自然、可信的语音。'}`,
+    `Current shot context: ${input.shotPrompt.trim() || '尚未编写视觉提示词。'}`,
     `The line should communicate: ${input.intent}`,
     `Delivery: ${input.delivery}. Length: ${input.length}. Language: ${input.language}.`,
     input.requiredWords ? `Include these exact words naturally: ${input.requiredWords}` : '',

@@ -5,7 +5,7 @@ export function shortPrompt(prompt: string) {
 export function libraryPromptTitle(prompt: string) {
   const authored = prompt.match(/(?:integrated_multimodal_description|detailed_description):\s*([\s\S]*?)(?=\n\s*(?:overall_soundscape|non_diegetic_music):|$)/i)?.[1] || prompt
   const line = authored.split(/\r?\n/).map(part => part.replace(/\[Shot\s+\d+\](?:\s+At\s+[\d:.]+,?\s+the\s+camera\s+cuts\s+to)?/gi, '').replace(/<[^>]+>/g, '').trim()).find(Boolean)
-  return shortPrompt(line || 'Untitled render')
+  return shortPrompt(line || '未命名渲染')
 }
 
 export function modelPrecisionLabel(model?: string) {

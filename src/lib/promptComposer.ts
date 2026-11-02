@@ -22,7 +22,7 @@ export const h3PromptDirectionSchema = {
 
 export function formatH3PromptOutput(direction: string, _summary: string, context: { mode: GenerationMode; duration: number; noDialogue?: boolean; referenceMap?: string[]; request?: string }) {
   const cleanDirection = normalizePromptDirection(direction)
-  if (!cleanDirection) throw new Error('The local model returned an empty shot direction.')
+  if (!cleanDirection) throw new Error('本地模型返回了空的镜头方向。')
   const state = stateFromReferenceMap(cleanDirection, context.duration, context.mode, context.referenceMap)
   state.noDialogue = context.noDialogue || false
   return compileScene(state).prompt

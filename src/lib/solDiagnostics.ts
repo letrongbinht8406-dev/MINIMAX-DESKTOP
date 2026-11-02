@@ -55,9 +55,9 @@ export function parseSolRuntimeDiagnostics(raw: string): SolRuntimeDiagnostics {
 }
 
 export function solRuntimeLabel(diagnostics: SolRuntimeDiagnostics) {
-  if (diagnostics.state === 'sparse') return diagnostics.correctnessGate === 'PASS' ? 'Sparse active · correctness gate passed' : 'Sparse active'
-  if (diagnostics.state === 'warmup') return 'Warmup / dense fallback'
-  if (diagnostics.state === 'declined') return `Sparse declined${diagnostics.declineReason ? ` · ${diagnostics.declineReason}` : ''}`
-  if (diagnostics.state === 'failed') return 'Correctness gate failed · dense fallback required'
-  return 'No Sol runtime statistics received yet'
+  if (diagnostics.state === 'sparse') return diagnostics.correctnessGate === 'PASS' ? '稀疏已启用 · 正确性门通过' : '稀疏已启用'
+  if (diagnostics.state === 'warmup') return '预热 / 稠密回退'
+  if (diagnostics.state === 'declined') return `稀疏未启用${diagnostics.declineReason ? ` · ${diagnostics.declineReason}` : ''}`
+  if (diagnostics.state === 'failed') return '正确性门失败 · 需稠密回退'
+  return '尚未收到 Sol 运行时统计'
 }

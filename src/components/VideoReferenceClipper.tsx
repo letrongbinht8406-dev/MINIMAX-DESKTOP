@@ -48,7 +48,7 @@ export function VideoReferenceClipper({ source, onClose, onCreate }: Props) {
     <section className="video-clipper" role="dialog" aria-modal="true" aria-labelledby="video-clipper-title">
       <header>
         <div><Scissors size={19} /><span><strong id="video-clipper-title">Create a video reference clip</strong><small>Choose the exact section MiniMax should study. Your original video stays unchanged.</small></span></div>
-        <button className="icon-button" onClick={onClose} disabled={busy} aria-label="Close video clipper"><X size={18} /></button>
+        <button className="icon-button" onClick={onClose} disabled={busy} aria-label="关闭视频剪辑器"><X size={18} /></button>
       </header>
       <div className="video-clipper-body">
         <div className="video-clipper-player">
@@ -75,11 +75,11 @@ export function VideoReferenceClipper({ source, onClose, onCreate }: Props) {
               setPlayhead(event.currentTarget.currentTime)
             }
           }} onError={() => { setPlaybackState('paused'); setError('This video cannot be previewed by Electron. Try converting it to MP4 (H.264/AAC) first.') }} />
-          <div className="video-clipper-playback-status" role="status" aria-live="polite">{playbackState === 'loading' ? 'Loading preview…' : playbackState === 'playing' ? `Playing selection · stops at ${time(end)}` : playbackState === 'ended' ? 'Selection end reached' : 'Preview ready'}</div>
+          <div className="video-clipper-playback-status" role="status" aria-live="polite">{playbackState === 'loading' ? 'Loading preview…' : playbackState === 'playing' ? `Playing selection · stops at ${time(end)}` : playbackState === 'ended' ? '已到达选择末尾' : '预览就绪'}</div>
           <div className="video-source-name"><CirclePlay size={14} /><span title={source.name}>{source.name}</span><output>{duration ? time(duration) : 'Reading video…'}</output></div>
         </div>
         <div className="video-clipper-controls">
-          <div className="clip-selection-heading"><span><strong>Selected reference</strong><small>Ref2V accepts a focused 2–15 second section.</small></span><output className={valid ? '' : 'invalid'}>{length.toFixed(1)} seconds</output></div>
+          <div className="clip-selection-heading"><span><strong>已选参考</strong><small>Ref2V accepts a focused 2–15 second section.</small></span><output className={valid ? '' : 'invalid'}>{length.toFixed(1)} seconds</output></div>
           <label>Playhead<input type="range" min="0" max={duration || 15} step="0.04" value={playhead} disabled={!duration} onChange={(event) => seek(Number(event.target.value))} /><output>{time(playhead)}</output></label>
           <div className="clip-in-out">
             <label>Start<input type="number" min="0" max={Math.max(0, end - 2)} step="0.04" value={Number(start.toFixed(2))} onChange={(event) => { const next = clamp(Number(event.target.value), 0, Math.max(0, end - 2)); setStart(next); seek(next) }} /></label>
@@ -92,7 +92,7 @@ export function VideoReferenceClipper({ source, onClose, onCreate }: Props) {
           {error && <p className="clip-validation" role="alert">{error}</p>}
         </div>
       </div>
-      <footer><span>The new MP4 is saved in your output folder and used only as a reference.</span><div><button className="secondary-button" disabled={busy} onClick={onClose}>Cancel</button><button className="primary-button" disabled={!valid || busy} onClick={async () => { setBusy(true); setError(''); try { await onCreate(start, end) } catch (reason) { setError(reason instanceof Error ? reason.message : String(reason)); setBusy(false) } }}>{busy ? <LoaderCircle className="spin" size={15} /> : <Scissors size={15} />}{busy ? 'Creating clip…' : 'Create reference clip'}</button></div></footer>
+      <footer><span>The new MP4 is saved in your output folder and used only as a reference.</span><div><button className="secondary-button" disabled={busy} onClick={onClose}>Cancel</button><button className="primary-button" disabled={!valid || busy} onClick={async () => { setBusy(true); setError(''); try { await onCreate(start, end) } catch (reason) { setError(reason instanceof Error ? reason.message : String(reason)); setBusy(false) } }}>{busy ? <LoaderCircle className="spin" size={15} /> : <Scissors size={15} />}{busy ? 'Creating clip…' : '创建参考片段'}</button></div></footer>
     </section>
   </div>
 }

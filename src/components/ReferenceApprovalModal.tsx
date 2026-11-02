@@ -20,10 +20,10 @@ export function ReferenceApprovalModal({ title, description, image, approveLabel
 
   return <div className="modal-backdrop reference-approval-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose() }}>
     <section className="reference-approval-modal" role="dialog" aria-modal="true" aria-labelledby="reference-approval-title">
-      <header><div><span><Sparkles size={18} /></span><div><strong id="reference-approval-title">{title}</strong><small>{description}</small></div></div><button onClick={onClose} aria-label="Close reference review"><X size={18} /></button></header>
-      <div className="reference-approval-preview"><img src={image} alt="Generated reference awaiting approval" /></div>
-      <div className="reference-approval-status"><Check size={16} /><span><strong>Ready for review</strong><small>{nextStep ?? 'Approve to add this result to the reference library.'}</small></span></div>
-      <footer><button className="secondary-button" onClick={onClose}>Keep current</button><button className="secondary-button generation-button" onClick={onRetry}><RefreshCw size={14} />Retry</button><button className={`primary-button ${approveStartsGeneration ? 'generation-button' : ''}`} autoFocus onClick={onApprove}><Check size={14} />{approveLabel}</button></footer>
+      <header><div><span><Sparkles size={18} /></span><div><strong id="reference-approval-title">{title}</strong><small>{description}</small></div></div><button onClick={onClose} aria-label="关闭参考审阅"><X size={18} /></button></header>
+      <div className="reference-approval-preview"><img src={image} alt="待批准的生成参考图" /></div>
+      <div className="reference-approval-status"><Check size={16} /><span><strong>待审核</strong><small>{nextStep ?? '批准后即将该结果加入参考素材库。'}</small></span></div>
+      <footer><button className="secondary-button" onClick={onClose}>保留当前</button><button className="secondary-button generation-button" onClick={onRetry}><RefreshCw size={14} />重试</button><button className={`primary-button ${approveStartsGeneration ? 'generation-button' : ''}`} autoFocus onClick={onApprove}><Check size={14} />{approveLabel}</button></footer>
     </section>
   </div>
 }

@@ -63,7 +63,7 @@ export function collectWorkspaceSearchEntries(root: HTMLElement): WorkspaceSearc
       || compactSearchText(control.getAttribute('placeholder'))
       || compactSearchText(control.getAttribute('title'))
       || compactSearchText(id)
-      || 'Workspace setting'
+      || '工作区设置'
     const context = searchContextText(control)
     const target = searchTargetForControl(control, parentLabel ?? associatedLabel)
     const searchableText = compactSearchText([

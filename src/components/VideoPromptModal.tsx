@@ -66,30 +66,30 @@ export function VideoPromptModal({ value, promptingTool, onChange, onPromptTool,
   return createPortal(<div className="video-prompt-modal-backdrop" onMouseDown={event => { if (event.target === event.currentTarget) onClose() }}>
     <section ref={dialogRef} className="video-prompt-modal" role="dialog" aria-modal="true" aria-labelledby="video-prompt-modal-title" onKeyDown={trapFocus}>
       <header className="video-prompt-modal-header">
-        <span><strong id="video-prompt-modal-title">Prompt workspace</strong><small>Write at full size and insert production language. The exact render prompt is in Scene details → Compiled.</small></span>
+        <span><strong id="video-prompt-modal-title">提示词工作区</strong><small>在全屏尺寸下书写并插入生产语言。确切的渲染提示词位于「场景详情 → 已编译」。</small></span>
         <div>
-          <button type="button" onClick={() => onPromptTool('timeline')} disabled={Boolean(promptingTool)}><Clock3 size={15} />{promptingTool === 'timeline' ? 'Building…' : 'Timeline'}</button>
-          <button type="button" onClick={() => onPromptTool('enhance')} disabled={Boolean(promptingTool)}><WandSparkles size={15} />{promptingTool === 'enhance' ? 'Improving…' : 'Improve'}</button>
-          <button type="button" className="video-prompt-modal-close" onClick={onClose} aria-label="Close large prompt editor"><X size={18} /></button>
+          <button type="button" onClick={() => onPromptTool('timeline')} disabled={Boolean(promptingTool)}><Clock3 size={15} />{promptingTool === 'timeline' ? '生成中…' : '时间线'}</button>
+          <button type="button" onClick={() => onPromptTool('enhance')} disabled={Boolean(promptingTool)}><WandSparkles size={15} />{promptingTool === 'enhance' ? '增强中…' : '增强'}</button>
+          <button type="button" className="video-prompt-modal-close" onClick={onClose} aria-label="关闭大型提示词编辑器"><X size={18} /></button>
         </div>
       </header>
       <div className="video-prompt-modal-body">
         <main className="video-prompt-modal-editor">
-          <div className="video-prompt-modal-hints"><span><code>##</code> structured H3 tags</span><span><code>//</code> production commands</span><span>{value.length.toLocaleString()} characters</span></div>
-          <H3PromptEditor ref={editorRef} idPrefix="video-prompt-modal" value={value} onChange={onChange} ariaLabel="Large video prompt editor" placeholder="Describe the scene. Type ## for H3 sections or // for production commands…" onProductionCommandChange={handleCommandTrigger} onProductionCommandKeyDown={handleEditorKeyDown} />
+          <div className="video-prompt-modal-hints"><span><code>##</code> 结构化 H3 标签</span><span><code>//</code> 生产指令</span><span>{value.length.toLocaleString()} 字符</span></div>
+          <H3PromptEditor ref={editorRef} idPrefix="video-prompt-modal" value={value} onChange={onChange} ariaLabel="大型视频提示词编辑器" placeholder="描述场景。输入 ## 插入 H3 分段，或输入 // 调出生产指令…" onProductionCommandChange={handleCommandTrigger} onProductionCommandKeyDown={handleEditorKeyDown} />
         </main>
-        <aside className="video-prompt-command-sidebar" aria-label="Production command browser">
-          <header><span><strong><code>//</code> Production commands</strong><small>{commandTrigger ? 'Keep typing to filter; Enter inserts.' : 'Browse or type // in the editor.'}</small></span><em>{results.length}</em></header>
-          <label className="video-prompt-command-search"><Search size={14} /><input value={query} onChange={event => setQuery(event.target.value)} placeholder="Search camera, lens, lighting…" aria-label="Search production commands" />{query && <button type="button" onClick={() => setQuery('')} aria-label="Clear command search"><X size={12} /></button>}</label>
-          <div className="video-prompt-command-categories" role="group" aria-label="Command category">
-            <button type="button" className={category === 'all' ? 'active' : ''} onClick={() => setCategory('all')}>All</button>
+        <aside className="video-prompt-command-sidebar" aria-label="制作命令浏览器">
+          <header><span><strong><code>//</code> 生产指令</strong><small>{commandTrigger ? '继续输入以筛选；回车插入。' : '浏览，或在编辑器中输入 //。'}</small></span><em>{results.length}</em></header>
+          <label className="video-prompt-command-search"><Search size={14} /><input value={query} onChange={event => setQuery(event.target.value)} placeholder="搜索机位、镜头、灯光…" aria-label="搜索制作命令" />{query && <button type="button" onClick={() => setQuery('')} aria-label="清除命令搜索"><X size={12} /></button>}</label>
+          <div className="video-prompt-command-categories" role="group" aria-label="命令分类">
+            <button type="button" className={category === 'all' ? 'active' : ''} onClick={() => setCategory('all')}>全部</button>
             {promptPresetCategories.map(item => <button type="button" className={category === item.id ? 'active' : ''} key={item.id} onClick={() => setCategory(item.id)}>{item.label}</button>)}
           </div>
-          <div className="video-prompt-command-results" role="listbox" aria-label="Production commands">
-            {results.map((item, index) => <button type="button" role="option" aria-selected={index === active} className={index === active ? 'active' : ''} key={item.id} onMouseDown={event => event.preventDefault()} onMouseEnter={() => setActive(index)} onClick={() => insertCommand(item)}><span><strong>{item.label}</strong><em>{item.category}</em></span><small>{item.description}</small>{index === active && commandTrigger && <kbd>Enter</kbd>}</button>)}
-            {!results.length && <div className="video-prompt-command-empty"><Search size={20} /><strong>No matching commands</strong><small>Try camera, orbit, lighting, dialogue, continuity, or lens.</small></div>}
+          <div className="video-prompt-command-results" role="listbox" aria-label="制作命令">
+            {results.map((item, index) => <button type="button" role="option" aria-selected={index === active} className={index === active ? 'active' : ''} key={item.id} onMouseDown={event => event.preventDefault()} onMouseEnter={() => setActive(index)} onClick={() => insertCommand(item)}><span><strong>{item.label}</strong><em>{item.category}</em></span><small>{item.description}</small>{index === active && commandTrigger && <kbd>回车</kbd>}</button>)}
+            {!results.length && <div className="video-prompt-command-empty"><Search size={20} /><strong>无匹配指令</strong><small>试试机位、环绕、灯光、对白、连续性或镜头。</small></div>}
           </div>
-          <footer><Check size={13} /><span>Commands insert at the cursor and remain editable.</span></footer>
+          <footer><Check size={13} /><span>指令插入在光标处，且仍可编辑。</span></footer>
         </aside>
       </div>
     </section>

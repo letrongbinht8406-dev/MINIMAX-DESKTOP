@@ -18,9 +18,9 @@ export function resolveAttentionBackend(preference: AttentionBackendPreference, 
 }
 
 export function attentionBackendLabel(backend?: string) {
-  if (!backend) return 'ComfyUI default attention'
-  if (/kitchen|int8/i.test(backend)) return 'Kitchen INT8 attention'
+  if (!backend) return 'ComfyUI 默认注意力'
+  if (/kitchen|int8/i.test(backend)) return 'Kitchen INT8 注意力'
   if (/sage/i.test(backend)) return 'SageAttention'
-  if (/pytorch|native|sdpa/i.test(backend)) return 'Native PyTorch attention'
+  if (/pytorch|native|sdpa/i.test(backend)) return 'Native PyTorch 注意力'
   return backend
 }
