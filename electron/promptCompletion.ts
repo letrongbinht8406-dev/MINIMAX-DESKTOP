@@ -1,4 +1,4 @@
-export type PromptCompletionProvider = 'ollama' | 'lmstudio'
+export type PromptCompletionProvider = 'ollama' | 'lmstudio' | 'llama'
 
 export function buildPromptCompletionRequest(provider: PromptCompletionProvider, model: string, context: string) {
   const excerpt = context.slice(-1800)

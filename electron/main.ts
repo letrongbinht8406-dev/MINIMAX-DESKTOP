@@ -52,12 +52,15 @@ type RenderIntentValues = GenerationDefaults & {
 type RenderSettingsPreset = { id: string; name: string; values: RenderIntentValues; createdAt: number; updatedAt: number }
 
 type AppSettings = {
-  llmProvider: 'ollama' | 'lmstudio'
+  llmProvider: 'ollama' | 'lmstudio' | 'llama'
   comfyUrl: string
   ollamaUrl: string
   ollamaModel: string
   lmStudioUrl: string
   lmStudioModel: string
+  llamaUrl: string
+  llamaModel: string
+  llamaApiKey: string
   modelRoot: string
   paths: Record<ModelKind, string>
   outputDirectory: string
@@ -153,12 +156,15 @@ app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required')
 function defaultSettings(): AppSettings {
   const root = join(app.getPath('documents'), 'ComfyUI', 'models')
   return {
-    llmProvider: 'ollama',
+    llmProvider: 'llama',
     comfyUrl: 'http://127.0.0.1:8188',
     ollamaUrl: 'http://127.0.0.1:11434',
     ollamaModel: 'qwen3:latest',
     lmStudioUrl: 'http://127.0.0.1:1234/api/v1/',
     lmStudioModel: '',
+    llamaUrl: 'http://127.0.0.1:18434',
+    llamaModel: 'Qwen3.8-27B-UD-Q4_K_M',
+    llamaApiKey: '',
     modelRoot: root,
     paths: Object.fromEntries(modelKinds.map((kind) => [kind, join(root, kind)])) as Record<ModelKind, string>,
     outputDirectory: join(app.getPath('documents'), 'ComfyUI', 'output'),
@@ -194,8 +200,10 @@ function finalOllamaAnswer(value: string) {
 type LlmProvider = AppSettings['llmProvider']
 
 function llmLabel(provider: LlmProvider) {
-  return provider === 'lmstudio' ? 'LM Studio' : 'Ollama'
+  return provider === 'lmstudio' ? 'LM Studio' : provider === 'llama' ? 'llama.cpp' : 'Ollama'
 }
+
+function isOaiApi(provider: LlmProvider): boolean { return provider === 'lmstudio' || provider === 'llama' }
 
 function lmStudioPath(url: string, path: string) {
   return lmStudioEndpoint(url, path)
@@ -213,19 +221,28 @@ function assertLlmUrl(value: string, provider: LlmProvider) {
   let parsed: URL
   try { parsed = new URL(value) } catch { throw new Error(`Enter a valid ${llmLabel(provider)} server URL.`) }
   if (!['http:', 'https:'].includes(parsed.protocol)) throw new Error(`${llmLabel(provider)} must use an HTTP or HTTPS URL.`)
-  if (provider === 'lmstudio') assertLocalLmStudioUrl(value)
+  if (isOaiApi(provider)) assertLocalLmStudioUrl(value)
 }
 
 async function llmFetch(url: string, path: string, provider: LlmProvider, init?: RequestInit, timeoutMs = 600_000, onStream?: (update: LlmStreamUpdate) => void) {
   assertLlmUrl(url, provider)
   const label = llmLabel(provider)
+  if (provider === 'llama') {
+    try {
+      const raw = JSON.parse(await readFile(settingsPath(), 'utf8')) as Partial<AppSettings>
+      if (typeof raw.llamaApiKey === 'string' && raw.llamaApiKey.trim()) {
+        const headers = { ...(init?.headers as Record<string, string> | undefined), Authorization: `Bearer ${raw.llamaApiKey.trim()}` }
+        init = { ...init, headers }
+      }
+    } catch { /* no persisted key; proceed unauthenticated */ }
+  }
   let response: Response
   try {
-    response = await fetch(provider === 'lmstudio' ? path : `${cleanUrl(url)}${path}`, { ...init, signal: init?.signal ?? AbortSignal.timeout(timeoutMs) })
+    response = await fetch(isOaiApi(provider) ? path : `${cleanUrl(url)}${path}`, { ...init, signal: init?.signal ?? AbortSignal.timeout(timeoutMs) })
   } catch (cause) {
     const timedOut = cause instanceof Error && (cause.name === 'TimeoutError' || cause.name === 'AbortError')
     if (timedOut) throw new Error(`${label} did not respond in time. Confirm the selected model is loaded, then try again.`)
-    throw new Error(`Could not reach ${label} at ${cleanUrl(url)}. ${provider === 'ollama' ? 'Start Ollama' : 'Start the LM Studio local server'}, check the server URL, then try again.`)
+    throw new Error(`Could not reach ${label} at ${cleanUrl(url)}. ${provider === 'llama' ? 'Start llama-server (llama.cpp)' : provider === 'ollama' ? 'Start Ollama' : 'Start the LM Studio local server'}, check the server URL, then try again.`)
   }
   if (!response.ok) {
     const body = await response.text().catch(() => '')
@@ -240,14 +257,14 @@ async function llmFetch(url: string, path: string, provider: LlmProvider, init?:
   if (onStream) {
     if (!response.body) throw new Error(`${label} returned no response stream.`)
     const result = await readLlmStream(response.body, provider, onStream)
-    return provider === 'lmstudio' ? { choices: [{ message: { content: result.content } }] } : { message: { content: result.content }, response: result.content }
+    return isOaiApi(provider) ? { choices: [{ message: { content: result.content } }] } : { message: { content: result.content }, response: result.content }
   }
   const contentType = response.headers.get('content-type') ?? ''
   return contentType.includes('application/json') ? response.json() : response.text()
 }
 
 async function listLlmModels(url: string, provider: LlmProvider) {
-  if (provider === 'lmstudio') {
+  if (isOaiApi(provider)) {
     const result = await llmFetch(url, lmStudioPath(url, '/models'), provider, undefined, 10_000)
     return parseLmStudioModels(result)
   }
@@ -256,7 +273,7 @@ async function listLlmModels(url: string, provider: LlmProvider) {
 }
 
 async function generateWithLlm(url: string, model: string, prompt: string, provider: LlmProvider, onStream?: (update: LlmStreamUpdate) => void) {
-  if (provider === 'lmstudio') {
+  if (isOaiApi(provider)) {
     const data = await llmFetch(url, lmStudioPath(url, '/chat/completions'), provider, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ model, messages: [{ role: 'user', content: prompt }], stream: Boolean(onStream), temperature: 0.65, max_tokens: 1800 }) }, 600_000, onStream) as { choices?: Array<{ message?: { content?: string } }>; error?: { message?: string } | string }
     const answer = finalOllamaAnswer(data.choices?.[0]?.message?.content ?? '')
     if (!answer) throw new Error(typeof data.error === 'string' ? data.error : data.error?.message || 'LM Studio returned an empty response.')
@@ -353,7 +370,7 @@ function isJsonObject(value: string) {
 
 async function generatePromptCompletion(url: string, model: string, context: string, provider: LlmProvider) {
   const request = buildPromptCompletionRequest(provider, model, context)
-  if (provider === 'lmstudio') {
+  if (isOaiApi(provider)) {
     const data = await llmFetch(url, lmStudioPath(url, request.path), provider, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(request.body) }, 20_000) as { choices?: Array<{ message?: { content?: string } }> }
     return finalOllamaAnswer(data.choices?.[0]?.message?.content ?? '').trim().slice(0, 320)
   }
@@ -419,7 +436,7 @@ async function loadSettings(): Promise<AppSettings> {
     const rawRouting = raw.gpuRouting
     const validDevice = (value: unknown): GpuRouteDevice => typeof value === 'string' && (value === 'auto' || value === 'cpu' || /^gpu:\d+$/.test(value)) ? value as GpuRouteDevice : 'auto'
     const gpuRouting: GpuRoutingSettings = { ...defaults.gpuRouting, ...rawRouting, preset: rawRouting?.preset === 'single' || rawRouting?.preset === 'split' || rawRouting?.preset === 'custom' ? rawRouting.preset : 'automatic', strategy: rawRouting?.strategy === 'resident' || rawRouting?.strategy === 'cpu-fallback' ? rawRouting.strategy : 'sequential', diffusion: validDevice(rawRouting?.diffusion), textEncoder: validDevice(rawRouting?.textEncoder), videoVae: validDevice(rawRouting?.videoVae), audioVae: validDevice(rawRouting?.audioVae), previewVae: validDevice(rawRouting?.previewVae), allowOvercommit: rawRouting?.allowOvercommit === true, preloadDiffusionDuringTextEncoding: rawRouting?.preloadDiffusionDuringTextEncoding === true }
-    return { ...defaults, ...raw, outputDirectory, clipMasterOutputDirectory, uiScale, attentionBackend, solAttnTau, solCacheEnabled: raw.solCacheEnabled !== false, h3DiffusionPrecision: raw.h3DiffusionPrecision === 'nvfp4' ? 'nvfp4' : 'int8', gpuRouting, h3ParallelAttentionEnabled: raw.h3ParallelAttentionEnabled === true, queueDelaySeconds: Math.max(0, Math.min(600, Number(raw.queueDelaySeconds) || 0)), experimentalLtxMsrEnabled: raw.experimentalLtxMsrEnabled === true, blurNsfwLivePreviews: raw.blurNsfwLivePreviews === true, llmProvider: raw.llmProvider === 'lmstudio' ? 'lmstudio' : 'ollama', characterDetailReferencesEnabled: raw.characterDetailReferencesEnabled === true, renderSettingsPresets, paths: { ...defaults.paths, ...raw.paths }, generationDefaults }
+    return { ...defaults, ...raw, outputDirectory, clipMasterOutputDirectory, uiScale, attentionBackend, solAttnTau, solCacheEnabled: raw.solCacheEnabled !== false, h3DiffusionPrecision: raw.h3DiffusionPrecision === 'nvfp4' ? 'nvfp4' : 'int8', gpuRouting, h3ParallelAttentionEnabled: raw.h3ParallelAttentionEnabled === true, queueDelaySeconds: Math.max(0, Math.min(600, Number(raw.queueDelaySeconds) || 0)), experimentalLtxMsrEnabled: raw.experimentalLtxMsrEnabled === true, blurNsfwLivePreviews: raw.blurNsfwLivePreviews === true, llmProvider: raw.llmProvider === 'lmstudio' ? 'lmstudio' : raw.llmProvider === 'llama' ? 'llama' : 'ollama', characterDetailReferencesEnabled: raw.characterDetailReferencesEnabled === true, renderSettingsPresets, paths: { ...defaults.paths, ...raw.paths }, generationDefaults }
   } catch {
     return defaultSettings()
   }
@@ -680,9 +697,9 @@ async function handleLanRequest(request: IncomingMessage, response: ServerRespon
         const prompt = typeof body.prompt === 'string' ? body.prompt.trim() : ''
         if (!prompt || prompt.length > 50_000) return sendJson(response, 400, { error: 'A shorter prompt-assistant request is required.' })
         const provider = settings.llmProvider ?? 'ollama'
-        const llmUrl = provider === 'lmstudio' ? settings.lmStudioUrl : settings.ollamaUrl
-        const llmModel = provider === 'lmstudio' ? settings.lmStudioModel : settings.ollamaModel
-        if (!llmModel) return sendJson(response, 503, { error: `No ${provider === 'lmstudio' ? 'LM Studio' : 'Ollama'} model is selected.` })
+        const llmUrl = provider === 'lmstudio' ? settings.lmStudioUrl : provider === 'llama' ? settings.llamaUrl : settings.ollamaUrl
+        const llmModel = provider === 'lmstudio' ? settings.lmStudioModel : provider === 'llama' ? settings.llamaModel : settings.ollamaModel
+        if (!llmModel) return sendJson(response, 503, { error: `No ${llmLabel(provider)} model is selected.` })
         const answer = await generateWithLlm(llmUrl, llmModel, prompt, provider)
         return sendJson(response, 200, { response: answer })
       }
@@ -1467,12 +1484,12 @@ app.whenReady().then(async () => {
       }
     }
     if (!images.length) throw new Error('No readable local reference images were available to the copilot.')
-    const data = provider === 'lmstudio'
+    const data = isOaiApi(provider)
       ? await llmFetch(url, lmStudioPath(url, '/chat/completions'), provider, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ model, messages: [{ role: 'user', content: [{ type: 'text', text: prompt }, ...images.map((image) => ({ type: 'image_url', image_url: { url: `data:${image.mime};base64,${image.base64}` } }))] }], stream: false, temperature: 0.45, max_tokens: 1800 }) }) as { choices?: Array<{ message?: { content?: string } }>; error?: { message?: string } | string }
       : await llmFetch(url, '/api/chat', provider, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ model, messages: [{ role: 'user', content: prompt, images: images.map((image) => image.base64) }], stream: false, keep_alive: 0, think: false, options: { temperature: 0.45, num_predict: 1800 } }) }) as { message?: { content?: string }; error?: string }
-    const answer = provider === 'lmstudio' ? finalOllamaAnswer(('choices' in data ? data.choices?.[0]?.message?.content : '') ?? '') : finalOllamaAnswer(('message' in data ? data.message?.content : '') ?? '')
+    const answer = isOaiApi(provider) ? finalOllamaAnswer(('choices' in data ? data.choices?.[0]?.message?.content : '') ?? '') : finalOllamaAnswer(('message' in data ? data.message?.content : '') ?? '')
     const error = 'error' in data ? data.error : undefined
-    if (!answer) throw new Error(typeof error === 'string' ? error : error?.message || `${provider === 'lmstudio' ? 'LM Studio' : 'Ollama'} could not inspect the supplied reference images. Choose a local vision-capable model in Settings.`)
+    if (!answer) throw new Error(typeof error === 'string' ? error : error?.message || `${isOaiApi(provider) ? 'LM Studio' : 'Ollama'} could not inspect the supplied reference images. Choose a local vision-capable model in Settings.`)
     return answer
   })
   ipcMain.handle('ollama:structured', async (event, url: string, model: string, prompt: string, schema: Record<string, unknown>, provider: LlmProvider = 'ollama', imagePaths: string[] = [], requestId?: string) => {
@@ -1491,8 +1508,8 @@ app.whenReady().then(async () => {
       const mime = extension === '.png' ? 'image/png' : extension === '.webp' ? 'image/webp' : 'image/jpeg'
       images.push({ base64: bytes.toString('base64'), mime })
     }
-    const path = provider === 'lmstudio' ? lmStudioPath(url, '/chat/completions') : '/api/chat'
-    const payload = provider === 'lmstudio' ? { model, messages: [{ role: 'user', content: images.length ? [{ type: 'text', text: prompt }, ...images.map((image) => ({ type: 'image_url', image_url: { url: `data:${image.mime};base64,${image.base64}` } }))] : prompt }], stream: Boolean(requestId), response_format: { type: 'json_schema', json_schema: { name: 'oyama_ai_video_studio_response', strict: true, schema } }, temperature: 0.2, max_tokens: requestId ? 1024 : 6000, ...(requestId ? { reasoning_effort: 'low' } : {}) } : {
+    const path = isOaiApi(provider) ? lmStudioPath(url, '/chat/completions') : '/api/chat'
+    const payload = isOaiApi(provider) ? { model, messages: [{ role: 'user', content: images.length ? [{ type: 'text', text: prompt }, ...images.map((image) => ({ type: 'image_url', image_url: { url: `data:${image.mime};base64,${image.base64}` } }))] : prompt }], stream: Boolean(requestId), response_format: { type: 'json_schema', json_schema: { name: 'oyama_ai_video_studio_response', strict: true, schema } }, temperature: 0.2, max_tokens: requestId ? 1024 : 6000, ...(requestId ? { reasoning_effort: 'low' } : {}) } : {
         model,
         messages: [{ role: 'user', content: prompt, ...(images.length ? { images: images.map((image) => image.base64) } : {}) }],
         stream: Boolean(requestId),
@@ -1503,17 +1520,17 @@ app.whenReady().then(async () => {
       }
     const request = (body: unknown, onStream?: (update: LlmStreamUpdate) => void) => llmFetch(url, path, provider, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }, 600_000, onStream) as Promise<{ message?: { content?: string }; choices?: Array<{ message?: { content?: string } }>; error?: string | { message?: string } }>
     let data = await request(payload, requestId ? (update) => event.sender.send('llm:stream-update', requestId, update) : undefined)
-    let content = finalOllamaAnswer(provider === 'lmstudio' ? data.choices?.[0]?.message?.content ?? '' : data.message?.content ?? '')
+    let content = finalOllamaAnswer(isOaiApi(provider) ? data.choices?.[0]?.message?.content ?? '' : data.message?.content ?? '')
     // Reasoning models may exhaust a short live stream before producing JSON.
     // Retry the same grounded request without reasoning instead of losing the draft.
     if (requestId && !isJsonObject(content)) {
-      const fallback = provider === 'lmstudio' ? { ...payload, stream: false, reasoning_effort: 'none', max_tokens: 6000 } : { ...payload, stream: false, think: false }
+      const fallback = isOaiApi(provider) ? { ...payload, stream: false, reasoning_effort: 'none', max_tokens: 6000 } : { ...payload, stream: false, think: false }
       data = await request(fallback)
-      content = finalOllamaAnswer(provider === 'lmstudio' ? data.choices?.[0]?.message?.content ?? '' : data.message?.content ?? '')
+      content = finalOllamaAnswer(isOaiApi(provider) ? data.choices?.[0]?.message?.content ?? '' : data.message?.content ?? '')
     }
-    if (!content) throw new Error(typeof data.error === 'string' ? data.error : data.error?.message || `${provider === 'lmstudio' ? 'LM Studio' : 'Ollama'} returned an empty structured response.`)
+    if (!content) throw new Error(typeof data.error === 'string' ? data.error : data.error?.message || `${isOaiApi(provider) ? 'LM Studio' : 'Ollama'} returned an empty structured response.`)
     try { return JSON.parse(content) }
-    catch { throw new Error(`${provider === 'lmstudio' ? 'LM Studio' : 'Ollama'} returned a response that was not valid JSON.`) }
+    catch { throw new Error(`${isOaiApi(provider) ? 'LM Studio' : 'Ollama'} returned a response that was not valid JSON.`) }
   })
   ipcMain.handle('file:data-url', async (_event, filePath: string) => {
     const extension = extname(filePath).toLowerCase()

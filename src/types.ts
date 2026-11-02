@@ -77,12 +77,15 @@ export type RenderIntentValues = GenerationDefaults & {
 export type RenderSettingsPreset = { id: string; name: string; values: RenderIntentValues; createdAt: number; updatedAt: number }
 
 export type AppSettings = {
-  llmProvider: 'ollama' | 'lmstudio'
+  llmProvider: 'ollama' | 'lmstudio' | 'llama'
   comfyUrl: string
   ollamaUrl: string
   ollamaModel: string
   lmStudioUrl: string
   lmStudioModel: string
+  llamaUrl: string
+  llamaModel: string
+  llamaApiKey: string
   modelRoot: string
   paths: Record<ModelKind, string>
   outputDirectory: string
