@@ -1,8 +1,9 @@
 import { PreviewPanel, ProductionLoading } from './Workspace'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { AlertCircle, Check, CircleStop, Dices, Film, Gauge, ImagePlus, LoaderCircle, Sparkles, WandSparkles } from 'lucide-react'
+import { AlertCircle, Check, CircleStop, Dices, Film, Gauge, ImagePlus, LoaderCircle, Pin, Sparkles, WandSparkles } from 'lucide-react'
 import { buildZImage, ZIMAGE_DEFAULT_NEGATIVE_PROMPT, type ZImageVariant } from '../lib/zimage'
 import { imageProviders, providerCatalog } from '../lib/imageProviders/index'
+import { loadFilePins, saveFilePin, clearFilePin, resolvePinnedProvider } from '../lib/zimagePin'
 import type { ModelProvider } from '../lib/imageProviders/provider'
 import type { CustomImageModel } from '../lib/imageProviders/customRegistry'
 import { buildImageGraph, resolveProvider } from '../lib/imageProviders/resolve'
@@ -56,7 +57,19 @@ function readWorkspace(catalog: ModelProvider[] = imageProviders): StoredWorkspa
       ? saved.negativePrompt ?? ZIMAGE_DEFAULT_NEGATIVE_PROMPT
       : ZIMAGE_DEFAULT_NEGATIVE_PROMPT
     const providerId = typeof saved.providerId === 'string' && (saved.providerId === 'zimage' || catalog.some((provider) => provider.id === saved.providerId)) ? saved.providerId : 'zimage'
-  return { ...defaults, ...saved, providerId, negativePrompt, negativePromptInitialized: true, variant: saved.variant === 'base' ? 'base' : 'turbo' }
+    const pins = loadFilePins()
+    const lastFile = localStorage.getItem('zimage.last-file.v1') ?? ''
+    const pinnedId = resolvePinnedProvider(pins, catalog, lastFile, providerId)
+    const filePin = pinnedId !== providerId ? pins[lastFile] : undefined
+    return {
+      ...defaults,
+      ...saved,
+      providerId: pinnedId,
+      ...(filePin ? { steps: filePin.steps, guidance: filePin.cfg, seed: filePin.seed, resolution: filePin.resolution } : {}),
+      negativePrompt,
+      negativePromptInitialized: true,
+      variant: saved.variant === 'base' ? 'base' : 'turbo',
+    }
   }
   catch { return defaults }
 }
@@ -108,6 +121,7 @@ export function ZImageWorkspace({
   const [livePreview, setLivePreview] = useState(initial.livePreview)
   const [job, setJob] = useState<ZImageJob | null>(null)
   const [result, setResult] = useState<MediaFile | null>(null)
+  const [pinMap, setPinMap] = useState<Record<string, import('../lib/zimagePin').ZImageFilePin>>(() => loadFilePins(localStorage))
   const [busy, setBusy] = useState(false)
   const [assisting, setAssisting] = useState(false)
   const [message, setMessage] = useState('')
@@ -157,6 +171,10 @@ export function ZImageWorkspace({
           const saved = await window.minimax.saveComfyOutputImage(job.url, image, outputDirectory, 'image-creation')
           if (!disposed) {
             setResult({ ...saved, preview, kind: 'image' })
+            if (selectedProvider && saved.name) {
+              setPinMap(saveFilePin({ fileId: saved.name, providerId: selectedProvider.id, steps, cfg: guidance, seed, resolution, pinnedAt: Date.now() }, localStorage))
+              localStorage.setItem('zimage.last-file.v1', saved.name)
+            }
             updateJob(null); setBusy(false); setError(false); liveProgressRef.current = null; setLiveProgress(null); setMessage('图像生成完成，可以使用。')
           }
           return
@@ -164,9 +182,9 @@ export function ZImageWorkspace({
         if (entry?.status?.status_str === 'success') {
           completedWithoutOutputPolls += 1
           if (completedWithoutOutputPolls > 2) throw new Error('ComfyUI 已完成图像生成但未返回已保存的图片。请检查 SaveImage 节点和 ComfyUI 日志。')
-          if (!disposed) setMessage('ComfyUI finished; collecting the saved image…')
+          if (!disposed) setMessage('ComfyUI 已完成；正在收集已保存的图像…')
         } else if (!disposed) {
-          setMessage(liveProgressRef.current?.label ?? 'Rendering the image in ComfyUI…')
+          setMessage(liveProgressRef.current?.label ?? '正在 ComfyUI 中渲染图像…')
         }
       } catch (caught) {
         if (!disposed) { setMessage(caught instanceof Error ? caught.message : String(caught)); setError(true); setBusy(false); liveProgressRef.current = null; setLiveProgress(null); updateJob(null) }
@@ -176,6 +194,9 @@ export function ZImageWorkspace({
     }
     void poll()
     return () => { disposed = true; clearTimeout(timer) }
+  // 生成期间 provider/参数被 UI 锁定（busy 时控件禁用），poll effect 捕获的即为提交时的值；
+  // pin 保存依赖这批值，故在 deps 行显式豁免 exhaustive-deps（加入 deps 会重启动 poll 状态机）。
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [job, outputDirectory, updateJob])
 
   const installedModels = choices(info, 'UNETLoader', 'unet_name')
@@ -245,7 +266,7 @@ export function ZImageWorkspace({
 
   const create = async () => {
     if (!connected || !activeAvailable || !prompt.trim()) return
-    setBusy(true); setResult(null); setError(false); liveProgressRef.current = null; setLiveProgress(null); setMessage(`Submitting ${selectedProvider?.label ?? (variant === 'turbo' ? 'Z-Image 内置管线（Turbo）' : 'Z-Image 内置管线（基础）')} workflow…`)
+    setBusy(true); setResult(null); setError(false); liveProgressRef.current = null; setLiveProgress(null); setMessage(`正在提交${selectedProvider?.label ?? (variant === 'turbo' ? 'Z-Image 内置管线（Turbo）' : 'Z-Image 内置管线（基础）')} 工作流…`)
     try {
       const [width, height] = resolution.split('x').map(Number)
       let graph: ComfyPrompt
@@ -284,13 +305,13 @@ export function ZImageWorkspace({
       await window.minimax.cancelPrompt(job.url, job.id)
       setMessage('图像生成已取消。'); setError(false)
     } catch (caught) {
-      setMessage(`Could not cancel: ${caught instanceof Error ? caught.message : String(caught)}`); setError(true)
+      setMessage(`取消失败：${caught instanceof Error ? caught.message : String(caught)}`); setError(true)
     } finally { updateJob(null); setBusy(false); liveProgressRef.current = null; setLiveProgress(null) }
   }
 
   const enhance = async () => {
     if (!ollamaAvailable || !prompt.trim() || assisting) return
-    setAssisting(true); setError(false); setMessage('Asking the local prompt assistant…')
+    setAssisting(true); setError(false); setMessage('正在请求本地提示词助手…')
     try {
       const instruction = `Rewrite this as one polished still-image prompt for ${selectedProvider?.label ?? (variant === 'turbo' ? 'Z-Image Turbo' : '原始 Z-Image 基础模型')}. Preserve the subject and intent while improving composition, lens, lighting, environment, texture, color, and clarity. Do not describe motion, sound, timelines, or multiple shots. Return only the finished prompt.\n\nDRAFT:\n${prompt.trim()}`
       setPrompt(await window.minimax.generateWithOllama(ollamaUrl, ollamaModel, instruction, llmProvider))
@@ -303,8 +324,8 @@ export function ZImageWorkspace({
 
   return <div className="standard-page zimage-workspace">
     <div className="page-heading">
-      <div><p className="eyebrow">CREATE · Z‑IMAGE</p><h1>Image Creation</h1><p>Design production-ready stills and opening frames with focused image controls.</p></div>
-      <div className="heading-state"><span className={connected && activeAvailable ? 'ok' : 'warn'}>{connected && activeAvailable ? <Check size={15} /> : <AlertCircle size={15} />}{connected ? activeAvailable ? selectedProvider ? selectedProvider.label + ' 就绪' : variant === 'turbo' ? '极速模式就绪' : '原始模式就绪' : (selectedProvider ? selectedProvider.label : variant === 'turbo' ? 'Turbo' : 'Original') + ' model needed' : '引擎离线'}</span></div>
+      <div><p className="eyebrow">CREATE · Z‑IMAGE</p><h1>图像创建</h1><p>用聚焦的图像控件设计可直接投产的静帧与开场帧。</p></div>
+      <div className="heading-state"><span className={connected && activeAvailable ? 'ok' : 'warn'}>{connected && activeAvailable ? <Check size={15} /> : <AlertCircle size={15} />}{connected ? activeAvailable ? selectedProvider ? selectedProvider.label + ' 就绪' : variant === 'turbo' ? '极速模式就绪' : '原始模式就绪' : (selectedProvider ? selectedProvider.label : variant === 'turbo' ? 'Turbo' : '原始模式') + ' 缺少模型' : '引擎离线'}</span></div>
     </div>
 
     <div className="zimage-workspace-grid">
@@ -347,8 +368,8 @@ export function ZImageWorkspace({
 
       <PreviewPanel>
         <div className="panel-heading"><div><span>OUTPUT</span><strong>图像预览</strong></div>{result && <span className="zimage-complete"><Check size={13} />Ready</span>}</div>
-        <div className="zimage-preview-stage">{result?.preview ? <img src={result.preview} alt="已生成的 Z-Image 输出" /> : visibleLivePreview ? <figure className="live-preview zimage-live-preview"><img src={visibleLivePreview.url} alt="Z-Image 实时采样预览" /><figcaption>Live sampling preview{visibleLivePreview.step && visibleLivePreview.totalSteps ? ` · step ${visibleLivePreview.step} of ${visibleLivePreview.totalSteps}` : ''}</figcaption></figure> : busy ? <div className="render-state"><ProductionLoading label={liveProgress?.label || '正在准备图像条件'}/><strong>正在创建您的图像</strong><span>{liveProgress?.label ?? `${resolution.replace('x', ' × ')} · ${livePreview ? '等待实时预览' : '正在渲染（无实时预览）'}`}</span></div> : <div className="empty-preview"><div className="preview-icon"><ImagePlus size={28} /></div><strong>Your image will appear here</strong><span>Describe the still, select a canvas, and generate it locally.</span></div>}</div>
-        <div className="zimage-preview-actions"><span>{result ? `${result.name} · ${resolution.replace('x', ' × ')}` : 'Saved to ComfyUI · MiniMax_first_frames'}</span><div><button className="secondary-button" disabled={!result} onClick={() => result && onUse(result, resolution)}><ImagePlus size={16} />MiniMax I2V</button><button className="primary-button" disabled={!result} onClick={() => result && onUseLtx(result)} title="加载一个保持身份一致的 LTX 图生视频提示词"><Film size={16} />Send to LTX 2.5</button></div></div>
+        <div className="zimage-preview-stage">{result?.preview ? <img src={result.preview} alt="已生成的 Z-Image 输出" /> : visibleLivePreview ? <figure className="live-preview zimage-live-preview"><img src={visibleLivePreview.url} alt="Z-Image 实时采样预览" /><figcaption>实时采样预览{visibleLivePreview.step && visibleLivePreview.totalSteps ? ` · 第 ${visibleLivePreview.step}/${visibleLivePreview.totalSteps} 步` : ''}</figcaption></figure> : busy ? <div className="render-state"><ProductionLoading label={liveProgress?.label || '正在准备图像条件'}/><strong>正在创建您的图像</strong><span>{liveProgress?.label ?? `${resolution.replace('x', ' × ')} · ${livePreview ? '等待实时预览' : '正在渲染（无实时预览）'}`}</span></div> : <div className="empty-preview"><div className="preview-icon"><ImagePlus size={28} /></div><strong>你的图像将显示在这里</strong><span>描述静帧、选择画布，本地生成。</span></div>}</div>
+        <div className="zimage-preview-actions"><span>{result ? `${result.name} · ${resolution.replace('x', ' × ')}` : 'Saved to ComfyUI · MiniMax_first_frames'}</span>{result && pinMap[result.name] ? <button type="button" className="secondary-button" title="解除固定后，重新生成将跟随当前全局图像模型" onClick={() => setPinMap(clearFilePin(result.name, localStorage))}><Pin size={13} />已固定：{catalog.find((provider) => provider.id === pinMap[result.name].providerId)?.label ?? pinMap[result.name].providerId} · 解除</button> : null}<div><button className="secondary-button" disabled={!result} onClick={() => result && onUse(result, resolution)}><ImagePlus size={16} />MiniMax I2V</button><button className="primary-button" disabled={!result} onClick={() => result && onUseLtx(result)} title="加载一个保持身份一致的 LTX 图生视频提示词"><Film size={16} />Send to LTX 2.5</button></div></div>
       </PreviewPanel>
     </div>
   </div>
