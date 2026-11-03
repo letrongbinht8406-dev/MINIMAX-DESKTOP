@@ -1,9 +1,11 @@
 import { AssetLibraryRail } from './AssetLibraryRail'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Building2, Camera, Check, CircleStop, Film, ImagePlus, Images, LoaderCircle, MapPin, Orbit, Play, Sparkles, Trash2, TreePine, WandSparkles, X } from 'lucide-react'
 import { choices, type ObjectInfo } from '../lib/comfyInfo'
 import { buildZImage } from '../lib/zimage'
 import { anyImageProviderAvailable, studioImagePrompt } from '../lib/imageProviders/studio'
+import { pinnedStudioProvider, recordStudioPin } from '../lib/imageProviders/studioPin'
+import { StudioPinBadge } from './StudioPinBadge'
 import { resolveAttentionBackend } from '../lib/attentionBackend'
 import { loadLocationProjects, locationReferences, newLocationProject, saveLocationProjects, LOCATION_LIBRARY_EVENT } from '../lib/locationLibrary'
 import type { AppSettings, GenerationJob, LocationProject, MediaFile } from '../types'
@@ -91,15 +93,18 @@ export function LocationStudio({ settings, info, connected, ollamaAvailable, aut
   const zVae = choices(info, 'VAELoader', 'vae_name').find((name) => /^ae\.safetensors$/i.test(name)) ?? 'ae.safetensors'
   const zLegacyFiles = choices(info, 'UNETLoader', 'unet_name').includes(zModel) && choices(info, 'CLIPLoader', 'clip_name').includes(zEncoder) && choices(info, 'VAELoader', 'vae_name').includes(zVae)
   const zReady = connected && (zLegacyFiles || anyImageProviderAvailable(info, settings.customImageModels ?? []))
+  const usedProviderRef = useRef<string | undefined>(undefined)
   const buildStill = (text: string, width: number, height: number, legacySteps: number): unknown => {
-    const explicit = settings.imageProviderId
+    // 逐文件 pin 优先于全局设置；pin 的 provider 不可用时自动降级（legacy/兜底）
+    const explicit = pinnedStudioProvider('location', active.id, settings.customImageModels ?? []) ?? settings.imageProviderId
     if (explicit && explicit !== 'auto') {
       const picked = studioImagePrompt(info, explicit, { prompt: text, width, height }, settings.customImageModels ?? [])
-      if (picked.ok) return picked.prompt
+      if (picked.ok) { usedProviderRef.current = picked.providerId; return picked.prompt }
     }
+    usedProviderRef.current = undefined
     if (zLegacyFiles) return buildZImage(text, width, height, Math.floor(Math.random() * 1_000_000_000), zModel, zEncoder, zVae, legacySteps, 1, 'turbo', '', resolveAttentionBackend(settings.attentionBackend, choices(info, 'ModelAttentionBackend', 'attention')))
     const fallback = studioImagePrompt(info, null, { prompt: text, width, height }, settings.customImageModels ?? [])
-    if (fallback.ok) return fallback.prompt
+    if (fallback.ok) { usedProviderRef.current = fallback.providerId; return fallback.prompt }
     throw new Error('No image model available: please install the Z-Image Turbo or Qwen-Image model set and rescan.')
   }
   const chooseImage = async (target: 'base' | 'reference' = 'reference') => {
@@ -135,12 +140,12 @@ export function LocationStudio({ settings, info, connected, ollamaAvailable, aut
         const entry = history[job.id] as { status?: { status_str?: string }; outputs?: Record<string, { images?: Array<{ filename: string; subfolder?: string; type?: string }> }> } | undefined
         if (entry?.status?.status_str === 'error') throw new Error('地点参考生成失败。请检查 ComfyUI 日志。')
         const image = Object.values(entry?.outputs ?? {}).flatMap((output) => output.images ?? [])[0]
-        if (image) { const preview = await window.minimax.getOutputImage(job.url, image); const saved = await window.minimax.saveComfyOutputImage(job.url, image, settings.outputDirectory); if (!disposed) { setCandidate({ locationId: job.locationId, file: { ...saved, preview, kind: 'image' } }); setBusy(false); setJob(null); setError(false); setMessage('地点参考已就绪，等待确认。') }; return }
+        if (image) { const preview = await window.minimax.getOutputImage(job.url, image); const saved = await window.minimax.saveComfyOutputImage(job.url, image, settings.outputDirectory); recordStudioPin('location', job.locationId, usedProviderRef.current, '1344x768', settings.customImageModels ?? []); if (!disposed) { setCandidate({ locationId: job.locationId, file: { ...saved, preview, kind: 'image' } }); setBusy(false); setJob(null); setError(false); setMessage('地点参考已就绪，等待确认。') }; return }
       } catch (reason) { if (!disposed) { setMessage(reason instanceof Error ? reason.message : String(reason)); setError(true); setBusy(false); setJob(null) }; return }
       if (!disposed) timer = setTimeout(poll, 2000)
     }
     void poll(); return () => { disposed = true; clearTimeout(timer) }
-  }, [job, onNotice, settings.outputDirectory])
+  }, [job, onNotice, settings.outputDirectory, settings.customImageModels])
   const extractWalkthrough = async () => {
     if (!active.walkthroughVideo || !videoDuration || splitting) return
     setSplitting(true)
@@ -177,7 +182,7 @@ export function LocationStudio({ settings, info, connected, ollamaAvailable, aut
   return <><div className="standard-page character-studio location-studio">
     <div className="page-heading"><div><p className="eyebrow">GLOBAL LOCATION LIBRARY</p><h1>Location Studio</h1><p>Build reusable natural landscapes, constructed places, walkthroughs, and continuity-ready views.</p></div><div className="heading-state"><span className={active.baseImage ? 'ok' : 'warn'}>{active.baseImage ? <Check size={15} /> : natureOnly ? <TreePine size={15} /> : <MapPin size={15} />}{active.baseImage ? '主参考已就绪' : natureOnly ? '纯自然模式已启用' : '创建地点参考'}</span></div></div>
     <div className="character-studio-grid"><AssetLibraryRail title="Locations" items={projects.map(project => ({ id: project.id, name: project.name, detail: `${project.environmentMode === 'nature' ? '纯自然' : project.environmentMode === 'built' ? '人造环境' : '混合环境'} · ${locationReferences(project).length} reference${locationReferences(project).length === 1 ? '' : 's'}`, preview: project.baseImage?.preview, placeholder: project.environmentMode === 'nature' ? <TreePine size={18} /> : project.environmentMode === 'built' ? <Building2 size={18} /> : <MapPin size={18} /> }))} activeId={active.id} onAdd={add} onSelect={id => { setActiveId(id); setVideoDuration(0) }} />
-      <section className="character-workbench"><header><div><MapPin size={18} /><span><strong>地点与连续性</strong><small>Stable world details that can be reused across shots and movies.</small></span></div><button className="danger-button" onClick={remove}><Trash2 size={14} />删除地点</button></header>
+      <section className="character-workbench"><header><div><MapPin size={18} /><span><strong>地点与连续性</strong><small>Stable world details that can be reused across shots and movies.</small></span></div><StudioPinBadge studio="location" assetId={active.id} customModels={settings.customImageModels ?? []} /><button className="danger-button" onClick={remove}><Trash2 size={14} />删除地点</button></header>
         <div className="character-setup-grid"><section className="character-setup-panel"><div className="character-section-heading"><span>{natureOnly ? <TreePine size={15} /> : <MapPin size={15} />}</span><div><strong>场景配置</strong><small>在描述固定地理特征之前，请先定义环境类型。</small></div><em>{active.name.trim() ? '已保存到本地' : '名称为必填项'}</em></div>
           <label className={`location-nature-toggle ${natureOnly ? 'selected' : ''}`}>
             <input type="checkbox" checked={natureOnly} onChange={(event) => patch({ environmentMode: event.target.checked ? 'nature' : 'mixed', referencePrompt: '' })} />

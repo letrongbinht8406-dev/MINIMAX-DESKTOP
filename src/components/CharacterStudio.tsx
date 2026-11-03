@@ -1,9 +1,11 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { AlertCircle, Check, ChevronDown, CircleStop, Film, ImagePlus, Images, LoaderCircle, Mic2, Orbit, Plus, Scissors, Shirt, SlidersHorizontal, Sparkles, Star, Trash2, UserRound, WandSparkles, Watch, X } from 'lucide-react'
 import { CHARACTER_LIBRARY_EVENT, characterReferences, loadCharacterProjects, newCharacterProject, removeCharacterImage, saveCharacterProjects } from '../lib/characterLibrary'
 import { choices, type ObjectInfo } from '../lib/comfyInfo'
 import { buildZImage } from '../lib/zimage'
 import { anyImageProviderAvailable, studioImagePrompt } from '../lib/imageProviders/studio'
+import { pinnedStudioProvider, recordStudioPin } from '../lib/imageProviders/studioPin'
+import { StudioPinBadge } from './StudioPinBadge'
 import { resolveAttentionBackend } from '../lib/attentionBackend'
 import { loadWardrobeProjects, wardrobeReferences, WARDROBE_LIBRARY_EVENT } from '../lib/wardrobeLibrary'
 import { ACCESSORY_LIBRARY_EVENT, loadAccessoryProjects } from '../lib/accessoryLibrary'
@@ -238,15 +240,18 @@ export function CharacterStudio({ settings, info, connected, ollamaAvailable, au
   const zVae = choices(info, 'VAELoader', 'vae_name').find((name) => /^ae\.safetensors$/i.test(name)) ?? 'ae.safetensors'
   const zLegacyFiles = choices(info, 'UNETLoader', 'unet_name').includes(zModel) && choices(info, 'CLIPLoader', 'clip_name').includes(zEncoder) && choices(info, 'VAELoader', 'vae_name').includes(zVae)
   const zReady = connected && (zLegacyFiles || anyImageProviderAvailable(info, settings.customImageModels ?? []))
+  const usedProviderRef = useRef<string | undefined>(undefined)
   const buildStill = (text: string, width: number, height: number, legacySteps: number): unknown => {
-    const explicit = settings.imageProviderId
+    // 逐文件 pin 优先于全局设置；pin 的 provider 不可用时自动降级（legacy/兜底）
+    const explicit = pinnedStudioProvider('character', active.id, settings.customImageModels ?? []) ?? settings.imageProviderId
     if (explicit && explicit !== 'auto') {
       const picked = studioImagePrompt(info, explicit, { prompt: text, width, height }, settings.customImageModels ?? [])
-      if (picked.ok) return picked.prompt
+      if (picked.ok) { usedProviderRef.current = picked.providerId; return picked.prompt }
     }
+    usedProviderRef.current = undefined
     if (zLegacyFiles) return buildZImage(text, width, height, Math.floor(Math.random() * 1_000_000_000), zModel, zEncoder, zVae, legacySteps, 1, 'turbo', '', resolveAttentionBackend(settings.attentionBackend, choices(info, 'ModelAttentionBackend', 'attention')))
     const fallback = studioImagePrompt(info, null, { prompt: text, width, height }, settings.customImageModels ?? [])
-    if (fallback.ok) return fallback.prompt
+    if (fallback.ok) { usedProviderRef.current = fallback.providerId; return fallback.prompt }
     throw new Error('No image model available: please install the Z-Image Turbo or Qwen-Image model set and rescan.')
   }
   const identitySurveyRef2vaModel = choices(info, 'UNETLoader', 'unet_name').find((name) => /minimax_h3_ref2va/i.test(name))
@@ -309,6 +314,7 @@ export function CharacterStudio({ settings, info, connected, ollamaAvailable, au
         if (image) {
           const preview = await window.minimax.getOutputImage(masterJob.url, image)
           const saved = await window.minimax.saveComfyOutputImage(masterJob.url, image, settings.outputDirectory)
+          recordStudioPin('character', masterJob.characterId, usedProviderRef.current, masterJob.target === 'sheet' ? '1024x1024' : '768x1024', settings.customImageModels ?? [], masterJob.target)
           if (!disposed) {
             const file = { ...saved, preview, kind: 'image' as const }
             setCandidate({ characterId: masterJob.characterId, target: masterJob.target, file })
@@ -324,7 +330,7 @@ export function CharacterStudio({ settings, info, connected, ollamaAvailable, au
     }
     void poll()
     return () => { disposed = true; clearTimeout(timer) }
-  }, [masterJob, onNotice, settings.outputDirectory])
+  }, [masterJob, onNotice, settings.outputDirectory, settings.customImageModels])
   useEffect(() => {
     if (!batchJobs.length) return
     let disposed = false; let timer: ReturnType<typeof setTimeout>
@@ -339,7 +345,7 @@ export function CharacterStudio({ settings, info, connected, ollamaAvailable, au
           if (image) completed.push({ batchJob, image })
         }
         if (completed.length === batchJobs.length) {
-          const ready = await Promise.all(completed.map(async ({ batchJob, image }) => { const preview = await window.minimax.getOutputImage(batchJob.url, image); const saved = await window.minimax.saveComfyOutputImage(batchJob.url, image, settings.outputDirectory); return { ...saved, preview, kind: 'image' as const } }))
+          const ready = await Promise.all(completed.map(async ({ batchJob, image }) => { const preview = await window.minimax.getOutputImage(batchJob.url, image); const saved = await window.minimax.saveComfyOutputImage(batchJob.url, image, settings.outputDirectory); recordStudioPin('character', batchJob.characterId, usedProviderRef.current, '768x1024', settings.customImageModels ?? [], 'master'); return { ...saved, preview, kind: 'image' as const } }))
           if (!disposed) { setIdentityCandidates(ready); setSelectedCandidatePaths(ready.map((file) => file.path)); setBatchJobs([]); setMasterBusy(false); setMasterMessage(`${ready.length} identity candidates ready. Approve one or more.`) }; return
         }
         if (!disposed) setMasterMessage(`Rendering identity batch… ${completed.length} of ${batchJobs.length} ready`)
@@ -347,7 +353,7 @@ export function CharacterStudio({ settings, info, connected, ollamaAvailable, au
       timer = setTimeout(poll, 2000)
     }
     void poll(); return () => { disposed = true; clearTimeout(timer) }
-  }, [batchJobs, settings.outputDirectory])
+  }, [batchJobs, settings.outputDirectory, settings.customImageModels])
   const splitTurntable = async () => {
     if (!active.turntableVideo || videoDuration <= 0 || splitting) return
     setSplitting(true)
@@ -440,7 +446,7 @@ export function CharacterStudio({ settings, info, connected, ollamaAvailable, au
   return <><div className="standard-page character-studio character-workspace-v2">
     <div className="character-studio-grid">
       <section className={`character-workbench character-tab-${activeTab}`}>
-        <header className="character-titlebar"><div><span><strong>{active.name || '未命名角色'}</strong><small>{active.description || '请在检查器中添加稳定的身份描述。'}</small></span><button className={`character-favorite ${active.favorite ? 'active' : ''}`} aria-label={active.favorite ? '从收藏中移除' : '添加到收藏'} onClick={() => patch({ favorite: !active.favorite })}><Star size={14} fill={active.favorite ? 'currentColor' : 'none'} /></button></div><div><Badge tone={active.baseImage ? 'success' : 'warning'}>{active.baseImage ? '主图已就绪' : '需要主图'}</Badge><Button variant="primary" onClick={() => onUseInScene(active.id)} disabled={!characterReferences(active).length}>Use in Scene</Button><Button variant="icon" aria-label="删除角色" title="删除角色" onClick={remove}><Trash2 size={15} /></Button></div></header>
+        <header className="character-titlebar"><div><span><strong>{active.name || '未命名角色'}</strong><small>{active.description || '请在检查器中添加稳定的身份描述。'}</small></span><button className={`character-favorite ${active.favorite ? 'active' : ''}`} aria-label={active.favorite ? '从收藏中移除' : '添加到收藏'} onClick={() => patch({ favorite: !active.favorite })}><Star size={14} fill={active.favorite ? 'currentColor' : 'none'} /></button></div><div><Badge tone={active.baseImage ? 'success' : 'warning'}>{active.baseImage ? '主图已就绪' : '需要主图'}</Badge><StudioPinBadge studio="character" assetId={active.id} targets={["master", "sheet"]} customModels={settings.customImageModels ?? []} /><Button variant="primary" onClick={() => onUseInScene(active.id)} disabled={!characterReferences(active).length}>Use in Scene</Button><Button variant="icon" aria-label="删除角色" title="删除角色" onClick={remove}><Trash2 size={15} /></Button></div></header>
         <WorkspaceSectionTabs<CharacterWorkspaceSection> tabs={characterSections} active={workspaceSection} onChange={setWorkspaceSection} label="角色工作流分区" />
         <div className="character-library-tab-panel" hidden={workspaceSection !== 'library'}>
           <CharacterLibraryPanel projects={projects} activeId={active.id} onAdd={() => { add(); setWorkspaceSection('design') }} onSelect={id => { setActiveId(id); setVideoDuration(0); setSelectedReferencePath(''); setWorkspaceSection('design') }} />
