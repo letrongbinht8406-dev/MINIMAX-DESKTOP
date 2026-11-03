@@ -1,7 +1,14 @@
 packages:
   - .
 
-onlyBuiltDependencies:
-  - electron
-  - esbuild
-  - electron-winstaller
+overrides:
+  '@electron/rebuild': 3.7.2
+  electron-builder-squirrel-windows: 26.0.12
+
+# electron-builder 依赖链（@electron/rebuild → @electron/node-gyp）走 GitHub tarball（fork 无 npm 发布），放行 exotic 子依赖
+blockExoticSubdeps: false
+
+allowBuilds:
+  electron: true
+  electron-winstaller: true
+  esbuild: true
