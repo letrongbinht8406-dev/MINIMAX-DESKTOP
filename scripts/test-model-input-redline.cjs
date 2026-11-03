@@ -128,4 +128,15 @@ const refPrompt = compileScene(refState).prompt
 assert.ok(refPrompt.includes('reference generation'), 'REF2VA task label stays English')
 assert.ok(CJK.test(refPrompt.replace('reference generation', '参考生成')), 'detector must catch a Chinese task label')
 
+const { migrateContinueOptionValue, migrateContinueBeatOptions } = load('src/lib/continueOptionMigration.ts')
+assert.equal(migrateContinueOptionValue('shotSize', '大特写'), 'extreme close-up')
+assert.equal(migrateContinueOptionValue('shotSize', '特写'), 'close-up')
+assert.equal(migrateContinueOptionValue('cameraAngle', '俯角'), 'high angle')
+assert.equal(migrateContinueOptionValue('cameraMovement', '手持'), 'handheld camera')
+assert.equal(migrateContinueOptionValue('shotSize', '未知中文值'), '', 'unknown CJK falls back to inherit/auto')
+assert.equal(migrateContinueOptionValue('shotSize', 'wide shot'), 'wide shot', 'English values pass through untouched')
+assert.equal(migrateContinueOptionValue('shotSize', ''), '')
+const migratedBeat = migrateContinueBeatOptions({ shotSize: '中景', cameraAngle: '过肩', cameraMovement: '跟拍', name: 'b1' })
+assert.deepEqual({ ...migratedBeat, name: undefined }, { shotSize: 'medium shot', cameraAngle: 'over-the-shoulder angle', cameraMovement: 'tracking shot', name: undefined }, 'legacy Chinese beat values normalize to English enums')
+
 console.log('PASS: model-input redline — H3 prompts, ComfyUI/LTX graphs, and LLM request strings stay CJK-free')
