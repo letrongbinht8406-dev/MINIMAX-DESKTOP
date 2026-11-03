@@ -29,7 +29,7 @@ async function main() {
     await run(shell, args, 'Validation and shared build')
     const cli = require.resolve('electron-builder/out/cli/cli.js')
     const results = await Promise.allSettled([
-      run(process.execPath, [cli, '--win', 'nsis', '--x64', '--publish', 'never', '--config.npmRebuild=false', `--config.directories.output=${path.join(output, 'windows')}`], 'Windows', path.join(output, 'windows-build.log')),
+      run(process.execPath, [cli, '--win', 'nsis', '--x64', '--publish', 'never', '--config.npmRebuild=false', '--config.win.signAndEditExecutable=false', `--config.directories.output=${path.join(output, 'windows')}`], 'Windows', path.join(output, 'windows-build.log')),
       run(process.execPath, [cli, '--linux', 'zip', '--x64', '--publish', 'never', '--config.npmRebuild=false', `--config.directories.output=${path.join(output, 'linux')}`], 'Linux', path.join(output, 'linux-build.log')),
     ])
     const errors = results.filter(result => result.status === 'rejected')
