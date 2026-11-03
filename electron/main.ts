@@ -1291,7 +1291,7 @@ app.whenReady().then(async () => {
     }
   })
   ipcMain.handle('comfy:queue', (_event, url: string) => comfyFetch(url, '/queue', { signal: AbortSignal.timeout(10_000) }))
-  ipcMain.handle('comfy:info', (_event, url: string) => comfyFetch(url, '/object_info', { signal: AbortSignal.timeout(30_000) }))
+  ipcMain.handle('comfy:info', (_event, url: string) => comfyFetch(url, '/object_info', { signal: AbortSignal.timeout(120_000) }))
   ipcMain.handle('comfy:upload-data', async (_event, url: string, data: string) => {
     if (!data.startsWith('data:image/png;base64,') || data.length > 64_000_000) throw new Error('Invalid prepared image.')
     const form = new FormData()

@@ -260,6 +260,8 @@ export function ZImageWorkspace({
   ]
   const selectedProvider = catalog.find((provider) => provider.id === providerId)
   const selectedResolution = selectedProvider ? resolveProvider(info, selectedProvider) : null
+  // 区分「不可用」的原因：ComfyUI 没连上（或 info 未拉回）vs 真的缺模型文件
+  const catalogUnavailable = !connected || Object.keys(info ?? {}).length === 0
   const providerOptions = [
     { id: 'zimage', label: variant === 'turbo' ? 'Z-Image 内置管线（Turbo）' : 'Z-Image 内置管线（基础）', available },
     ...catalog.map((provider) => {
@@ -350,7 +352,7 @@ export function ZImageWorkspace({
         <div className="field-group">
           <div className="field-label"><label htmlFor="zimage-provider">图像模型</label><span>{selectedProvider?.description ?? 'Z-Image 内置管线'}</span></div>
           <select id="zimage-provider" value={providerId} disabled={busy} onChange={(event) => switchProvider(event.target.value)}>
-            {providerOptions.map((option) => <option key={option.id} value={option.id} disabled={!option.available}>{option.label}{option.available ? '' : ' · 需要模型'}</option>)}
+            {providerOptions.map((option) => <option key={option.id} value={option.id} disabled={!option.available}>{option.label}{option.available ? '' : (catalogUnavailable ? ' · ComfyUI 未连接' : ' · 需要模型')}</option>)}
           </select>
           {selectedResolution && !selectedResolution.available && <p className="field-help">缺少：{selectedResolution.missing.join('；')}</p>}
         </div>

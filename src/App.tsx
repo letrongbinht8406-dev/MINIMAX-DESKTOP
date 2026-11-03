@@ -685,7 +685,28 @@ function App() {
     }
   }, [])
 
-  const refreshOllama = useCallback(async (nextSettings: AppSettings, announce = false) => {
+  // ComfyUI 连接失败后自动低频重连（用户晚启动 ComfyUI 时，模型目录无需重启 App 即恢复）
+  const comfyUrlRef = useRef('')
+  const comfyRetryTimer = useRef<ReturnType<typeof setInterval> | null>(null)
+  useEffect(() => {
+    if (comfyRetryTimer.current) {
+      clearInterval(comfyRetryTimer.current)
+      comfyRetryTimer.current = null
+    }
+    if (!status || status.connected) return
+    if (!comfyUrlRef.current) return
+    comfyRetryTimer.current = setInterval(() => {
+      void checkConnection(comfyUrlRef.current)
+    }, 10_000)
+    return () => {
+      if (comfyRetryTimer.current) {
+        clearInterval(comfyRetryTimer.current)
+        comfyRetryTimer.current = null
+      }
+    }
+  }, [status, checkConnection])
+
+const refreshOllama = useCallback(async (nextSettings: AppSettings, announce = false) => {
     const connection = resolveLlmConnection(nextSettings)
     setLocalLlmChecking(true)
     try {
@@ -720,6 +741,7 @@ function App() {
       activeLlmUrl.current = resolveLlmConnection(loaded).url
       loadedSettingsSnapshot.current = JSON.stringify(loaded)
       setSettings(loaded)
+      comfyUrlRef.current = loaded.comfyUrl
       void Promise.all([scanModels(loaded), checkConnection(loaded.comfyUrl), refreshOllama(loaded)])
     }).catch((error: unknown) => {
       if (!disposed) setBootError(error instanceof Error ? error.message : String(error))
@@ -1383,6 +1405,7 @@ function App() {
     if (!settings) return
     try {
       await queueSettingsSave(settings)
+      comfyUrlRef.current = settings.comfyUrl
       const scanned = await scanModels(settings)
       const connection = await checkConnection(settings.comfyUrl)
       await refreshOllama(settings)
