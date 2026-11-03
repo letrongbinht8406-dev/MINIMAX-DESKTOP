@@ -51,7 +51,8 @@
     "test:image-providers": "node scripts/test-image-providers.cjs",
     "test:model-input-redline": "node scripts/test-model-input-redline.cjs",
     "test:zimage-pin": "node scripts/test-zimage-pin.cjs",
-    "test:studio-pin": "node scripts/test-studio-pin.cjs"
+    "test:studio-pin": "node scripts/test-studio-pin.cjs",
+    "fix:wincode-sign": "node scripts/fix-wincode-sign-cache.cjs"
   },
   "dependencies": {
     "@radix-ui/react-alert-dialog": "^1.1.23",
