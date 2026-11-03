@@ -33,7 +33,8 @@ const test = run('node scripts/test-image-providers.cjs')
 record('test:image-providers', test.code === 0, test.code === 0 ? '' : test.out.slice(-400))
 // 全量 test 链
 const fullTest = runPnpm('test')
-record('pnpm test(19 suites)', fullTest.code === 0, fullTest.code === 0 ? '' : fullTest.out.slice(-500))
+const suiteCount = (JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8')).scripts.test || '').match(/pnpm test:/g)?.length ?? 0
+record(`pnpm test(${suiteCount} suites)`, fullTest.code === 0, fullTest.code === 0 ? '' : fullTest.out.slice(-500))
 const buildWeb = runPnpm('build:web')
 record('build:web', buildWeb.code === 0, buildWeb.code === 0 ? '' : buildWeb.out.slice(-400))
 
