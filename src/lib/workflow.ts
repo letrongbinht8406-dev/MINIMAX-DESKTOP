@@ -68,7 +68,7 @@ export function buildMiniMaxWorkflow(
     source?: UploadedFile
   },
 ): ComfyPrompt {
-  if (options.turbo === 'fast' && options.mode !== 'text') throw new Error('FastVideo FastH3 supports text-to-audio-video only. Use the base MiniMax H3 model for image, first/last-frame, or reference generation.')
+  if (options.turbo === 'fast' && options.mode !== 'text') throw new Error('FastVideo FastH3 仅支持文生音画；图片、首尾帧或参考生成请使用基础 MiniMax H3 模型。')
   const scene = options.sceneState
   if (!Number.isFinite(options.duration) || options.duration <= 0 || options.duration > 15) throw new Error('片段时长必须大于 0 且不超过 15 秒。')
   const compiled = scene ? compileScene(scene) : undefined

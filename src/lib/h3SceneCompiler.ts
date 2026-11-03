@@ -77,7 +77,7 @@ export function compileScene(state: ScenePromptState): CompiledScene {
   if (openings.length > 1 || endings.length > 1) error('multiple-anchors', '只能有一个原生 Frame 0 锚点和一个结尾帧锚点处于激活状态。')
   if (state.mode === 'image' && !openings.length) error('missing-opening', '请选择图生视频的起始帧。')
   if (state.mode === 'frames' && !endings.length) error('missing-ending', '请选择结尾帧。末帧生成时起始帧为可选项。')
-  if (mode === 'Ref2VA' && !counters.image && !counters.video) error('visual-required', 'Reference generation requires an image or video; audio cannot be the only input.')
+  if (mode === 'Ref2VA' && !counters.image && !counters.video) error('visual-required', '参考生成需要图片或视频参考，音频不能是唯一输入。')
   if (counters.image > 9 || counters.video > 3 || counters.audio > 3) error('reference-limit', '参考素材上限为 9 张图片、3 个视频和 3 个音频文件。')
   if (new Set(refs.map(ref => ref.id)).size !== refs.length) error('duplicate-reference', '参考 ID 必须唯一。')
   const shots = state.shots
@@ -120,7 +120,7 @@ export function compileScene(state: ScenePromptState): CompiledScene {
   if (state.continuity.exactFrame && !openings.length) error('continuation-anchor', '需要 Frame-0 续接，但未指定图片作为原生 Frame 0 锚点。')
   const vocalDirection = /\b(?:says|whispers|shouts|speaks|asks|replies|sings|narrates)\b|<d>/i
   if (state.noDialogue && (state.dialogue.length || vocalDirection.test(`${state.scene}\n${state.soundscape.value}`) || refs.some(ref => ref.audio?.layer === 'voice'))) error('speech-disabled', '已启用"无对白"，但存在对白、发声指示或声音参考。')
-  if (/<(?:Subject|Picture|Video|Audio)\s+\d+>|(?:subject_definitions|integrated_multimodal_description|retention_analysis):/i.test(state.scene)) warning('legacy-format', 'This scene contains compiled H3 syntax. Use Manual Override to preserve an existing H3 prompt, or replace it with a natural scene description.')
+  if (/<(?:Subject|Picture|Video|Audio)\s+\d+>|(?:subject_definitions|integrated_multimodal_description|retention_analysis):/i.test(state.scene)) warning('legacy-format', '场景包含已编译的 H3 语法。请用手动覆盖保留现有 H3 提示词，或替换为自然场景描述。')
 
   const speakers: Record<string, string> = {}
   const dialogue = [...state.dialogue].sort((a, b) => (shots.findIndex(shot => shot.id === a.shotId) - shots.findIndex(shot => shot.id === b.shotId)) || a.at - b.at)
@@ -128,7 +128,7 @@ export function compileScene(state: ScenePromptState): CompiledScene {
     const shot = shots.find(shot => shot.id === line.shotId)
     if (!shot || !Number.isFinite(line.at) || line.at < shot.start || line.at >= shot.end) error('dialogue-time', '对白必须在其所属镜头内开始。')
     if (!line.text.trim() || !line.language.trim() || !line.speakerIds.length) error('dialogue-fields', '每句对白都需要指定说话人、语言和台词内容。')
-    if (/<\/?(?:d|scenetrans|cutoff)>|[<>]/.test(line.text) || /[[\]<>]/.test(line.language)) error('dialogue-markup', 'Write plain dialogue and a language name; the compiler owns dialogue tags.')
+    if (/<\/?(?:d|scenetrans|cutoff)>|[<>]/.test(line.text) || /[[\]<>]/.test(line.language)) error('dialogue-markup', '请写纯对白和语言名；对白标签由编译器负责。')
     line.speakerIds.forEach(id => { if (!state.characters.some(character => character.id === id)) error('speaker-missing', '某位对白说话人已不在场景中。'); if (!speakers[id]) speakers[id] = `S${Object.keys(speakers).length + 1}` })
     if (shot && line.text.split(/\s+/).length / 3 > shot.end - line.at && !line.cutoff && !line.continues) warning('speech-fit', '某句对白可能超出其所在镜头的剩余时长。')
     if ((line.continues === 'from' || line.continues === 'both') && !dialogue.some(other => other.shotId === shots[shots.findIndex(s => s.id === line.shotId) - 1]?.id && (other.continues === 'to' || other.continues === 'both') && other.speakerIds.join() === line.speakerIds.join())) error('speech-continuation', '跨剪辑点的对白需要匹配的续接部分且说话人相同。')
@@ -153,7 +153,7 @@ export function compileScene(state: ScenePromptState): CompiledScene {
       // independently composable.
       if (attribute === 'wardrobe' && (references || field.value)) {
         if (explicitNudityDirection && !wardrobeConflictReported) {
-          error('wardrobe-nudity-conflict', 'Scene explicitly requests nudity while a preserved wardrobe is active. Remove the nudity direction or disable Wardrobe Preserve before rendering.', field.referenceIds?.[0])
+          error('wardrobe-nudity-conflict', '场景明确要求裸露，但存在保留中的服装设定。渲染前请移除裸露指示或关闭服装保留。', field.referenceIds?.[0])
           wardrobeConflictReported = true
         }
         const safety = explicitNudityDirection
@@ -220,7 +220,7 @@ export function compileScene(state: ScenePromptState): CompiledScene {
     const observed = ref.observed.wardrobe ? ` (${clean(ref.observed.wardrobe)})` : ''
     const target = state.characters.length === 1 ? clean(state.characters[0].name) : 'the visible subject'
     if (explicitNudityDirection && !wardrobeConflictReported) {
-      error('wardrobe-nudity-conflict', 'Scene explicitly requests nudity while a preserved wardrobe is active. Remove the nudity direction or disable Wardrobe Preserve before rendering.', ref.id)
+      error('wardrobe-nudity-conflict', '场景明确要求裸露，但存在保留中的服装设定。渲染前请移除裸露指示或关闭服装保留。', ref.id)
       wardrobeConflictReported = true
     }
     const safety = explicitNudityDirection

@@ -20,7 +20,7 @@ export function CharacterReferenceList({ files, selectedPath, selectedReferenceP
           {file.preview ? <img src={file.preview} alt="" /> : <Images size={20} />}
           <span><strong>{file.name}</strong><small>{file.referenceType ?? `Angle ${index + 1}`} · {included ? '在已选集合中' : '未选中'}</small></span>
         </button>
-        <button type="button" className="character-reference-list-remove" aria-label={`Remove ${file.name} from character`} title="Remove from this character; keep the original file" onClick={() => onRemove(file.path)}><Trash2 size={15} /></button>
+        <button type="button" className="character-reference-list-remove" aria-label={`Remove ${file.name} from character`} title="从该角色移除；保留原文件" onClick={() => onRemove(file.path)}><Trash2 size={15} /></button>
       </article>
     })}</div> : <p><ImagePlus size={18} />No approved images yet. Add an image to build a reference set.</p>}
   </section>
