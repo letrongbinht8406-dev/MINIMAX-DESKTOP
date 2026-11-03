@@ -57,7 +57,8 @@ for (const provider of imageProviders) {
   const classes = Object.values(graph).map((node) => node.class_type)
   assert.ok(classes.includes('KSampler'), provider.id + ' graph has a sampler')
   assert.ok(classes.includes('SaveImage'), provider.id + ' graph has a save node')
-  assert.ok(!JSON.stringify(graph).match(/[\u4e00-\u9fff]/), provider.id + ' graph must not contain CJK model input')
+assert.ok(!JSON.stringify(graph).match(/[\u4e00-\u9fff]/), provider.id + ' graph must not contain CJK model input')
+  assert.ok('海'.match(/[\u4e00-\u9fff]/) && !'abc'.match(/[\u4e00-\u9fff]/), 'CJK regex self-check (matches CJK, rejects ascii)')
 }
 
 const qwenGraph = buildImageGraph(full, byId['qwen-image-2.1'], {
