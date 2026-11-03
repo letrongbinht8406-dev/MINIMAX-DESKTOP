@@ -116,3 +116,14 @@ assert.ok(untouched.requires.find((requirement) => requirement.role === 'diffusi
 const catalog = providerCatalog([{ id: 'mine', name: 'My Qwen', templateId: 'qwen-image-2.1', components: {} }])
 assert.equal(catalog.length, 6, 'catalog is built-ins plus the custom registration')
 assert.equal(catalog[catalog.length - 1].id, 'custom-mine')
+
+// 内置注册表深度冻结（qc finding 3）：共享引用不可被运行期改写
+const frozenProvider = imageProviders.find((provider) => provider.id === 'qwen-image-2.1')
+const frozenRequiresLength = frozenProvider.requires.length
+let pushThrew = false
+try { frozenProvider.requires.push({ role: 'x' }) } catch { pushThrew = true }
+assert.ok(pushThrew || frozenProvider.requires.length === frozenRequiresLength, 'built-in requires array is frozen (mutation is a no-op or throws)')
+const frozenPrefer = frozenProvider.requires[0].prefer
+let assignThrew = false
+try { frozenProvider.requires[0].prefer = [] } catch { assignThrew = true }
+assert.ok(assignThrew || frozenProvider.requires[0].prefer === frozenPrefer, 'built-in requirement objects are frozen (mutation is a no-op or throws)')

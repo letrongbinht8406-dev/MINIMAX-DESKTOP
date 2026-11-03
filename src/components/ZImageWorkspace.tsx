@@ -223,7 +223,7 @@ export function ZImageWorkspace({
   const selectedProvider = catalog.find((provider) => provider.id === providerId)
   const selectedResolution = selectedProvider ? resolveProvider(info, selectedProvider) : null
   const providerOptions = [
-    { id: 'zimage', label: variant === 'turbo' ? 'Z-Image Turbo' : '原始 Z-Image', available },
+    { id: 'zimage', label: variant === 'turbo' ? 'Z-Image 内置管线（Turbo）' : 'Z-Image 内置管线（基础）', available },
     ...catalog.map((provider) => {
       const resolution = resolveProvider(info, provider)
       return { id: provider.id, label: provider.label, available: resolution.available }
@@ -245,7 +245,7 @@ export function ZImageWorkspace({
 
   const create = async () => {
     if (!connected || !activeAvailable || !prompt.trim()) return
-    setBusy(true); setResult(null); setError(false); liveProgressRef.current = null; setLiveProgress(null); setMessage(`Submitting ${selectedProvider?.label ?? (variant === 'turbo' ? 'Z-Image Turbo' : 'Original Z-Image')} workflow…`)
+    setBusy(true); setResult(null); setError(false); liveProgressRef.current = null; setLiveProgress(null); setMessage(`Submitting ${selectedProvider?.label ?? (variant === 'turbo' ? 'Z-Image 内置管线（Turbo）' : 'Z-Image 内置管线（基础）')} workflow…`)
     try {
       const [width, height] = resolution.split('x').map(Number)
       let graph: ComfyPrompt

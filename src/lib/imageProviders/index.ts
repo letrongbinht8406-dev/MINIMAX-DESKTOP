@@ -20,4 +20,16 @@ export const imageProviders: ModelProvider[] = [
   zImage,
 ]
 
+// 内置注册表是常量：深度冻结，任何运行期 mutation（共享 requirement 对象、requires 数组）
+// 都会在写时失败，防止自定义克隆路径污染内置 provider（qc finding 3）。
+function deepFreeze<T>(value: T): T {
+  if (value && typeof value === 'object' && !Object.isFrozen(value)) {
+    for (const key of Object.getOwnPropertyNames(value)) deepFreeze((value as Record<string, unknown>)[key])
+    Object.freeze(value)
+  }
+  return value
+}
+
+for (const provider of imageProviders) deepFreeze(provider)
+
 export { buildCustomProviders, createCustomProvider, providerCatalog, type CustomImageModel } from './customRegistry'
