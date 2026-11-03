@@ -38,14 +38,23 @@ export function loadFilePins(storage: Pick<Storage, 'getItem'> = globalThis.loca
 
 export function saveFilePin(pin: ZImageFilePin, storage: Pick<Storage, 'setItem' | 'getItem'> = globalThis.localStorage): Record<string, ZImageFilePin> {
   const next = { ...loadFilePins(storage), [pin.fileId]: pin }
-  storage.setItem(STORAGE_KEY, JSON.stringify(next))
+  try {
+    storage.setItem(STORAGE_KEY, JSON.stringify(next))
+  } catch {
+    // pin 写失败（localStorage 配额/不可用）不该把已成功的生成拖成错误
+    console.warn('[zimagePin] file pin save failed (quota/unavailable); generation result unaffected')
+  }
   return next
 }
 
 export function clearFilePin(fileId: string, storage: Pick<Storage, 'setItem' | 'getItem'> = globalThis.localStorage): Record<string, ZImageFilePin> {
   const next = loadFilePins(storage)
   delete next[fileId]
-  storage.setItem(STORAGE_KEY, JSON.stringify(next))
+  try {
+    storage.setItem(STORAGE_KEY, JSON.stringify(next))
+  } catch {
+    console.warn('[zimagePin] file pin clear failed (quota/unavailable); UI state unchanged')
+  }
   return next
 }
 

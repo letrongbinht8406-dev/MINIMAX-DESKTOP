@@ -110,4 +110,11 @@ if (asJson) {
 } else {
   process.stdout.write(`\n${failed.length === 0 ? '裁决: PASS' : '裁决: FAIL'}（${checks.length - failed.length}/${checks.length}）\n`)
 }
+// 无人值守取证：结果落盘（Windows 非 pty 下 stdout 重定向可能丢缓冲，JSON 文件是唯一可靠证据）
+try {
+  fs.mkdirSync(path.join(root, 'release'), { recursive: true })
+  fs.writeFileSync(path.join(root, 'release', 'accept-route-a.last.json'), JSON.stringify({ verdict: failed.length === 0 ? 'pass' : 'fail', checks, at: new Date().toISOString() }, null, 2) + '\n')
+} catch {
+  // 落盘失败不挡验收主流程
+}
 process.exit(failed.length === 0 ? 0 : 1)

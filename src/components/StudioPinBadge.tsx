@@ -25,7 +25,7 @@ export function StudioPinBadge({ studio, assetId, target = 'main', targets, cust
         const provider = providerCatalog(customModels).find((entry) => entry.id === pin.providerId)
         return (
           <span key={key} className="studio-pin-badge" title="这个文件固定用该模型生成；解除后跟随全局图像模型设置">
-            <Pin size={11} /> 已固定（{key === 'main' ? '文件' : key}）：{provider?.label ?? pin.providerId}
+            <Pin size={11} /> 已固定（{key === 'main' ? '文件' : key === 'master' ? '主图' : key === 'sheet' ? '角色表' : key}）：{provider?.label ?? pin.providerId}
             <button type="button" onClick={() => { clearStudioPin(studio, assetId, key); bump((value) => value + 1) }}>解除</button>
           </span>
         )

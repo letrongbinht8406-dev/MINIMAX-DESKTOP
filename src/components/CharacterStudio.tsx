@@ -241,9 +241,9 @@ export function CharacterStudio({ settings, info, connected, ollamaAvailable, au
   const zLegacyFiles = choices(info, 'UNETLoader', 'unet_name').includes(zModel) && choices(info, 'CLIPLoader', 'clip_name').includes(zEncoder) && choices(info, 'VAELoader', 'vae_name').includes(zVae)
   const zReady = connected && (zLegacyFiles || anyImageProviderAvailable(info, settings.customImageModels ?? []))
   const usedProviderRef = useRef<string | undefined>(undefined)
-  const buildStill = (text: string, width: number, height: number, legacySteps: number): unknown => {
+  const buildStill = (text: string, width: number, height: number, legacySteps: number, pinTarget = 'master'): unknown => {
     // 逐文件 pin 优先于全局设置；pin 的 provider 不可用时自动降级（legacy/兜底）
-    const explicit = pinnedStudioProvider('character', active.id, settings.customImageModels ?? []) ?? settings.imageProviderId
+    const explicit = pinnedStudioProvider('character', active.id, settings.customImageModels ?? [], pinTarget) ?? settings.imageProviderId
     if (explicit && explicit !== 'auto') {
       const picked = studioImagePrompt(info, explicit, { prompt: text, width, height }, settings.customImageModels ?? [])
       if (picked.ok) { usedProviderRef.current = picked.providerId; return picked.prompt }
@@ -274,7 +274,7 @@ export function CharacterStudio({ settings, info, connected, ollamaAvailable, au
     if (!zReady || masterBusy || !renderPrompt.trim()) return
     setMasterBusy(true); setMasterError(false); setMasterMessage(target === 'sheet' ? 'Submitting the four-view character sheet to Z-Image Turbo…' : 'Submitting the master reference to Z-Image Turbo…')
     try {
-      const response = await window.minimax.submitPrompt(settings.comfyUrl, buildStill(renderPrompt.trim(), target === 'sheet' ? 1024 : 768, target === 'sheet' ? 1024 : 1024, identitySteps))
+      const response = await window.minimax.submitPrompt(settings.comfyUrl, buildStill(renderPrompt.trim(), target === 'sheet' ? 1024 : 768, target === 'sheet' ? 1024 : 1024, identitySteps, target))
       setMasterJob({ id: response.prompt_id, url: settings.comfyUrl, characterId: active.id, target })
       setMasterMessage(target === 'sheet' ? 'Constructing the character sheet in ComfyUI…' : 'Rendering the character master reference in ComfyUI…')
     } catch (error) {
@@ -286,7 +286,7 @@ export function CharacterStudio({ settings, info, connected, ollamaAvailable, au
     if (!zReady || masterBusy || !zPrompt.trim()) return
     setMasterBusy(true); setMasterError(false); setIdentityCandidates([]); setSelectedCandidatePaths([]); setCandidateStep('choose'); setApprovedFlowProject(null); setIdentitySurveyStartedAt(null); setMasterMessage(`Queueing ${count} distinct identity candidates…`)
     try {
-      const responses = await Promise.allSettled(Array.from({ length: count }, () => window.minimax.submitPrompt(settings.comfyUrl, buildStill(zPrompt.trim(), 768, 1024, identitySteps))))
+      const responses = await Promise.allSettled(Array.from({ length: count }, () => window.minimax.submitPrompt(settings.comfyUrl, buildStill(zPrompt.trim(), 768, 1024, identitySteps, 'master'))))
       const queued = responses.flatMap((response) => response.status === 'fulfilled' ? [{ id: response.value.prompt_id, url: settings.comfyUrl, characterId: active.id }] : [])
       if (!queued.length) throw new Error(responses.find((response) => response.status === 'rejected')?.reason instanceof Error ? responses.find((response) => response.status === 'rejected')!.reason.message : '无法将身份候选项加入队列。')
       setBatchJobs(queued)

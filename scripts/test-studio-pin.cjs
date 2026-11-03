@@ -45,4 +45,13 @@ const literals = [...src.matchAll(/'([^'\n]*)'|"([^"\n]*)"/g, 'g')].map((match) 
 assert.strictEqual(literals.some((literal) => /[\u4e00-\u9fff]/.test(literal)), false, 'studioPin.ts 字符串字面量含 CJK（模型/存储侧红线）')
 assert.ok(src.includes('asset:${studio}:${assetId}:${target}'), '资产 key 必须保持英文格式')
 
+// QC-F1 防回归：character 写端落 'master' 的 pin；读端缺省 target('main') 不命中，显式 'master' 才命中
+{
+  const st3 = new MemStorage()
+  recordStudioPin('character', 'char1', 'z-image', '768x1024', [], 'master', st3)
+  assert.ok(studioPinOf('character', 'char1', 'master', st3)?.providerId === 'z-image', 'character master pin 可读')
+  assert.strictEqual(pinnedStudioProvider('character', 'char1', [], 'master', st3), 'z-image', "读端传 'master' 命中")
+  assert.strictEqual(pinnedStudioProvider('character', 'char1', [], 'main', st3), undefined, "读端缺省 'main' 不命中 master pin（防 F1 错位）")
+}
+
 console.log('PASS: studio asset-pin — key/往返/降级/红线 全过')

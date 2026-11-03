@@ -389,7 +389,7 @@ export function ZImageWorkspace({
         <div className="zimage-preview-actions"><span>{result ? `${result.name} · ${resolution.replace('x', ' × ')}` : 'Saved to ComfyUI · MiniMax_first_frames'}</span>{result && pinMap[result.name] ? (() => {
   const pin = pinMap[result.name]
   const drifted = pin.providerId !== providerId || pin.steps !== steps || pin.cfg !== guidance || pin.seed !== seed || pin.resolution !== resolution
-  return <button type="button" className="secondary-button" title={drifted ? '当前参数已偏离该文件固定值；重新生成会用当前参数（再次生成后 pin 随新值更新）' : '解除固定后，重新生成将跟随当前全局图像模型'} onClick={() => setPinMap(clearFilePin(result.name, localStorage))}><Pin size={13} />已固定：{catalog.find((provider) => provider.id === pin.providerId)?.label ?? pin.providerId}{drifted ? '（参数已偏离）' : ''} · 解除</button>
+  return <button type="button" className="secondary-button" title={drifted ? '当前参数已偏离该文件固定值；重新生成会用当前参数（再次生成后固定值随新参数更新）' : '解除固定后，重新生成将跟随当前全局图像模型'} onClick={() => setPinMap(clearFilePin(result.name, localStorage))}><Pin size={13} />已固定：{catalog.find((provider) => provider.id === pin.providerId)?.label ?? pin.providerId}{drifted ? '（参数已偏离）' : ''} · 解除</button>
 })() : null}<div><button className="secondary-button" disabled={!result} onClick={() => result && onUse(result, resolution)}><ImagePlus size={16} />MiniMax I2V</button><button className="primary-button" disabled={!result} onClick={() => result && onUseLtx(result)} title="加载一个保持身份一致的 LTX 图生视频提示词"><Film size={16} />Send to LTX 2.5</button></div></div>
       </PreviewPanel>
     </div>
