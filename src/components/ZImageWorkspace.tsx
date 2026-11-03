@@ -30,6 +30,7 @@ type StoredWorkspace = {
   steps: number
   guidance: number
   livePreview: boolean
+  pinRestored?: boolean
 }
 
 const defaults: StoredWorkspace = {
@@ -66,6 +67,7 @@ function readWorkspace(catalog: ModelProvider[] = imageProviders): StoredWorkspa
       ...saved,
       providerId: pinnedId,
       ...(filePin ? { steps: filePin.steps, guidance: filePin.cfg, seed: filePin.seed, resolution: filePin.resolution } : {}),
+      pinRestored: Boolean(filePin),
       negativePrompt,
       negativePromptInitialized: true,
       variant: saved.variant === 'base' ? 'base' : 'turbo',
@@ -122,6 +124,21 @@ export function ZImageWorkspace({
   const [job, setJob] = useState<ZImageJob | null>(null)
   const [result, setResult] = useState<MediaFile | null>(null)
   const [pinMap, setPinMap] = useState<Record<string, import('../lib/zimagePin').ZImageFilePin>>(() => loadFilePins(localStorage))
+
+  // pin 恢复只改 providerId/steps/cfg/seed/resolution；model/encoder/vae 仍是上一个 provider 会话里存的值。
+  // 等 object_info 就绪后按 pin 的 provider 重新解析组件（与 switchProvider 同一逻辑），避免跨 provider 组件错位。
+  const pinAlignedRef = useRef(false)
+  useEffect(() => {
+    if (pinAlignedRef.current || !initial.pinRestored) return
+    if (!info || Object.keys(info).length === 0) return
+    pinAlignedRef.current = true
+    const provider = catalog.find((candidate) => candidate.id === initial.providerId)
+    if (!provider) return
+    const resolution = resolveProvider(info, provider)
+    if (resolution.components.diffusion) setModel(String(resolution.components.diffusion))
+    if (resolution.components.textEncoder) setEncoder(String(resolution.components.textEncoder))
+    if (resolution.components.vae) setVae(String(resolution.components.vae))
+  }, [catalog, info, initial])
   const [busy, setBusy] = useState(false)
   const [assisting, setAssisting] = useState(false)
   const [message, setMessage] = useState('')
