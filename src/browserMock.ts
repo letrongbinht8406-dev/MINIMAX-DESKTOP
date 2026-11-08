@@ -119,6 +119,23 @@ export function installBrowserMock() {
     chooseMedia: async () => null,
     chooseVideos: async () => [],
     scanModels: async () => examples.map(([kind, name, bytes]) => ({ kind, name, bytes, path: `${current.paths[kind]}\\${name}` })),
+    getModelDiagnostics: async () => {
+      const items = (Object.keys(current.paths) as Array<ModelFile['kind']>).map((kind) => {
+        const fileCount = examples.filter(([exampleKind]) => exampleKind === kind).length
+        return { kind, path: current.paths[kind], status: (fileCount > 0 ? 'ok' : 'empty') as 'ok' | 'empty', fileCount }
+      })
+      return {
+        items,
+        summary: {
+          total: items.length,
+          ok: items.filter((item) => item.status === 'ok').length,
+          empty: items.filter((item) => item.status === 'empty').length,
+          missing: 0,
+          unreadable: 0,
+          files: items.reduce((total, item) => total + item.fileCount, 0),
+        },
+      }
+    },
     getComfyStatus: async () => ({ connected: false, latencyMs: 2, error: '预览模式' }),
     submitPrompt: async () => { throw new Error('桌面桥接在浏览器预览中不可用。') },
     getQueue: async () => ({}),

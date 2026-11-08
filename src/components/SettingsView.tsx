@@ -1,11 +1,11 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { NumberField, SelectField } from "./FormFields"
 import { LegacyMigrationControl } from './LegacyMigrationControl'
 import { createId } from "../lib/createId"
 import { resolveLlmConnection } from "../lib/llmProvider"
 import { formatBenchmarkDuration, h3StackReport, type H3BenchmarkConfig, type H3BenchmarkResult } from "../lib/h3Diagnostics"
 import { MINIMAX_VIDEO_RESOLUTIONS } from "../lib/videoResolutions"
-import type { AppSettings, ComfyStatus, GenerationJob, GpuTelemetry, ModelFile, ModelKind, OllamaModel, LocalLlmStatus, LegacyMigrationStatus, RenderSettingsPreset } from "../types"
+import type { AppSettings, ComfyStatus, GenerationJob, GpuTelemetry, ModelFile, ModelKind, ModelPathDiagnostics, OllamaModel, LocalLlmStatus, LegacyMigrationStatus, RenderSettingsPreset } from "../types"
 import { Activity, AlertCircle, Aperture, Check, ChevronDown, Clock3, Download, ExternalLink, Folder, FolderOpen, Gauge, HardDrive, Image as ImageIcon, LoaderCircle, Minus, Pencil, Plus, RefreshCw, RotateCcw, Save, SlidersHorizontal, Sparkles, Trash2, X } from 'lucide-react'
 import { choices, type ObjectInfo } from '../lib/comfyInfo'
 import { findH3ParallelAttentionNode, findH3PreviewOverrideNode, findSolAttentionNode, findSolCompatibleCacheNode } from '../lib/h3NodeDetection'
@@ -75,6 +75,15 @@ export function SettingsView({ settings, setSettings, info, models, jobs, gpu, h
   ]
   const defaults = settings.generationDefaults
   const llm = resolveLlmConnection(settings)
+  // 目录诊断独立于模型扫描：路径写错时明确报「目录不存在」，不再让用户只看到「0 个文件」
+  const [modelPaths, setModelPaths] = useState<ModelPathDiagnostics | null>(null)
+  useEffect(() => {
+    let cancelled = false
+    void window.minimax.getModelDiagnostics(settings)
+      .then((result) => { if (!cancelled) setModelPaths(result) })
+      .catch(() => { if (!cancelled) setModelPaths(null) })
+    return () => { cancelled = true }
+  }, [settings])
   const activeModelField = settings.llmProvider === 'lmstudio' ? 'lmStudioModel' : settings.llmProvider === 'llama' ? 'llamaModel' : 'ollamaModel'
   const activeUrlField = settings.llmProvider === 'lmstudio' ? 'lmStudioUrl' : settings.llmProvider === 'llama' ? 'llamaUrl' : 'ollamaUrl'
   const currentLlmStatus = localLlmStatus?.provider === llm.provider && localLlmStatus.url === llm.url ? localLlmStatus : null
@@ -347,7 +356,7 @@ export function SettingsView({ settings, setSettings, info, models, jobs, gpu, h
       {settings.llmProvider === 'ollama' && !currentLlmStatus && <div className="llm-setup-message"><Sparkles size={16} /><span><strong>Ollama 设置</strong><small>1. 安装并启动 Ollama。2. 在终端运行 <code>ollama pull qwen3:latest</code>。3. 除非 Ollama 使用其它端口，否则保持默认地址。4. 选择 <b>测试并刷新</b>。</small></span></div>}
       <p className="settings-note">{settings.llmProvider === 'lmstudio' ? 'LM Studio 仅限环回地址（localhost、127.0.0.1 或 ::1）。启动其本地服务器以检测已安装的文本模型；LM Studio 可在需要时加载所选模型。' : settings.llmProvider === 'llama' ? '提示词与参考图像直接发送到本地 llama.cpp 服务器（Ollama 兼容端点 /api/tags、/api/generate、/api/chat）。默认指向 127.0.0.1:18434 的 Qwen 模型；按需修改地址与模型名。图像分析需要加载视觉模型。' : '提示词与参考图像直接发送到所选本地 Ollama 服务器。嵌入与云支持的条目被排除。图像分析需要具备视觉能力的模型；纯文本模型仍支持提示词精修。'}</p>
     </section>
-    <section className="settings-section" id="settings-models"><div className="settings-heading"><div><HardDrive size={19} /><span><strong>模型位置</strong><small>文件就地索引，永不移动或复制。</small></span></div><button className="secondary-button" onClick={onScan} disabled={scanning}>{scanning ? <LoaderCircle size={16} className="spin" /> : <RefreshCw size={16} />}{scanning ? '扫描中…' : '重新扫描'}</button></div><div className="path-table">{pathRows.map((row) => { const count = models.filter((model) => model.kind === row.kind).length; return <div className="path-row" key={row.kind}><div className="path-kind"><Folder size={17} /><span><strong>{row.label}</strong><small>{row.note}</small></span></div><div className="path-input"><input value={settings.paths[row.kind]} onChange={(event) => setSettings({ ...settings, paths: { ...settings.paths, [row.kind]: event.target.value } })} /><button onClick={async () => { const path = await window.minimax.chooseDirectory(settings.paths[row.kind]); if (path) setSettings({ ...settings, paths: { ...settings.paths, [row.kind]: path } }) }} aria-label={`浏览 ${row.label}`}><FolderOpen size={17} /></button></div><span className="file-count">{count} 个文件</span></div>})}</div></section>
+    <section className="settings-section" id="settings-models"><div className="settings-heading"><div><HardDrive size={19} /><span><strong>模型位置</strong><small>文件就地索引，永不移动或复制。</small></span></div><button className="secondary-button" onClick={onScan} disabled={scanning}>{scanning ? <LoaderCircle size={16} className="spin" /> : <RefreshCw size={16} />}{scanning ? '扫描中…' : '重新扫描'}</button></div>{modelPaths && <div className={`model-path-summary ${modelPaths.summary.missing + modelPaths.summary.unreadable > 0 ? 'warn' : 'ok'}`}><AlertCircle size={15} /><span>{modelPaths.summary.missing + modelPaths.summary.unreadable > 0 ? `目录诊断：${modelPaths.summary.ok}/${modelPaths.summary.total} 个目录就绪，${modelPaths.summary.missing} 个路径不存在${modelPaths.summary.unreadable ? `、${modelPaths.summary.unreadable} 个不可读` : ''}。请把路径指向 ComfyUI 的 models 目录（或 extra_model_paths 里登记的目录），再点「重新扫描」。` : `目录诊断：${modelPaths.summary.ok}/${modelPaths.summary.total} 个目录就绪，共 ${modelPaths.summary.files} 个模型文件${modelPaths.summary.empty ? `；${modelPaths.summary.empty} 个目录为空（可选类别允许为空）` : ''}。`}</span></div>}<div className="path-table">{pathRows.map((row) => { const count = models.filter((model) => model.kind === row.kind).length; const diagnostic = modelPaths?.items.find((item) => item.kind === row.kind); const statusText = diagnostic?.status === 'missing' ? '目录不存在' : diagnostic?.status === 'unreadable' ? '不可读' : diagnostic?.status === 'empty' ? '目录为空' : ''; return <div className="path-row" key={row.kind}><div className="path-kind"><Folder size={17} /><span><strong>{row.label}</strong><small>{row.note}</small></span></div><div className="path-input"><input value={settings.paths[row.kind]} onChange={(event) => setSettings({ ...settings, paths: { ...settings.paths, [row.kind]: event.target.value } })} /><button onClick={async () => { const path = await window.minimax.chooseDirectory(settings.paths[row.kind]); if (path) setSettings({ ...settings, paths: { ...settings.paths, [row.kind]: path } }) }} aria-label={`浏览 ${row.label}`}><FolderOpen size={17} /></button></div><span className={`file-count${diagnostic && diagnostic.status !== 'ok' ? ` path-status-${diagnostic.status}` : ''}`}>{count} 个文件{statusText ? ` · ${statusText}` : ''}</span></div>})}</div></section>
     <section className="settings-section" id="settings-image-provider">
       <div className="settings-heading"><div><ImageIcon size={19} /><span><strong>图像生成模型</strong><small>资产工作室（角色/服装/配饰/发型/地点）与图像工作区共用此选择。“自动”优先 Z-Image 内置管线，未安装时自动退回第一个可用模型。</small></span></div></div>
       <div className="field-group"><label htmlFor="image-provider-select">提供方</label><div className="select-wrap"><select id="image-provider-select" value={settings.imageProviderId} onChange={(event) => setSettings({ ...settings, imageProviderId: event.target.value })}><option value="auto">自动（Z-Image 优先，退回可用模型）</option>{imageProviderResolutions.map((entry) => <option key={entry.provider.id} value={entry.provider.id} disabled={!entry.available}>{entry.provider.label}{entry.available ? '' : '（未安装）'}</option>)}</select></div></div>

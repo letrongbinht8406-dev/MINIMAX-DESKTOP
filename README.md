@@ -5,6 +5,9 @@
 > “MiniMax” and “MiniMax H3” are used only to describe compatible third-party
 > models and services. Model weights and third-party components are not covered
 > by this repository's license; use them only under their own applicable terms.
+>
+> For commercial delivery, see [docs/MODEL_LICENSES.md](docs/MODEL_LICENSES.md)
+> for the three-layer license checklist and the per-delivery record fields.
 
 Oyama AI Video Studio is a local-first AI filmmaking workstation for ComfyUI. It brings MiniMax H3 video, LTX 2.5 video, Z-Image stills, ACE-Step music, reusable production assets, and local rendering into one desktop workspace. Models are indexed and used in place: the application never downloads, copies, or reorganizes your model files.
 

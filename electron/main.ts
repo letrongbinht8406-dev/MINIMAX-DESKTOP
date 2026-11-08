@@ -8,6 +8,7 @@ import { restoreLegacyLocalStorage } from './legacyBrowserStorage.js'
 import { buildPromptCompletionRequest } from './promptCompletion.js'
 import { lmStudioEndpoint, parseLmStudioModels } from './lmStudioApi.js'
 import { readLlmStream, type LlmStreamUpdate } from './llmStream.js'
+import { diagnoseModelPaths, summarizeModelPaths } from './modelDiagnostics.js'
 import { basename, dirname, extname, isAbsolute, join, normalize, relative, resolve } from 'node:path'
 import { createHash, randomUUID } from 'node:crypto'
 import { spawn } from 'node:child_process'
@@ -654,11 +655,16 @@ async function handleLanRequest(request: IncomingMessage, response: ServerRespon
       if (token !== lanToken) return sendJson(response, 401, { error: 'This LAN link is no longer authorized. Open the current sharing panel again.' })
       const settings = await loadSettings()
       if (url.pathname === '/api/lan/bootstrap' && request.method === 'GET') {
+        const modelPathItems = diagnoseModelPaths(settings.paths)
+        const modelPaths = { items: modelPathItems, summary: summarizeModelPaths(modelPathItems) }
         const groups = await Promise.all(modelKinds.map((kind) => scanDirectory(settings.paths[kind], kind)))
         const started = Date.now()
         try {
-          await comfyFetch(settings.comfyUrl, '/system_stats')
-          const info = await comfyFetch(settings.comfyUrl, '/object_info').catch(() => ({})) as Record<string, unknown>
+          // 两个只读请求并发：object_info 在大节点树上最慢，不必等 system_stats 返回后才发出
+          const [info] = await Promise.all([
+            comfyFetch(settings.comfyUrl, '/object_info').catch(() => ({})),
+            comfyFetch(settings.comfyUrl, '/system_stats'),
+          ]) as [Record<string, unknown>, unknown]
           const upscalers = comfyChoices(info, 'UpscaleModelLoader', 'model_name')
           const latentUpscalers = comfyChoices(info, 'LatentUpscaleModelLoader', 'model_name')
           const vaes = comfyChoices(info, 'VAELoader', 'vae_name')
@@ -668,9 +674,9 @@ async function handleLanRequest(request: IncomingMessage, response: ServerRespon
           const llmUrl = llmProvider === 'lmstudio' ? settings.lmStudioUrl : llmProvider === 'llama' ? settings.llamaUrl : settings.ollamaUrl
           const llmModel = llmProvider === 'lmstudio' ? settings.lmStudioModel : llmProvider === 'llama' ? settings.llamaModel : settings.ollamaModel
           const llmModels = await listLlmModels(llmUrl, llmProvider).catch(() => [])
-          return sendJson(response, 200, { connected: true, latencyMs: Date.now() - started, models: groups.flat(), upscalers, ltxModel: latentUpscalers.find((name) => /ltx-2\.5.*spatial.*x2/i.test(name)) ?? '', ltxVae: vaes.find((name) => /ltx-2\.5.*video.*vae/i.test(name)) ?? '', ltxUpscaleReady: ltxUpscaleMissing.length === 0, ltxUpscaleMissing, ltxNativeReady: ltxNativeMissing.length === 0, ltxNativeMissing, ollamaModels: llmModels.map((item) => item.name), ollamaModel: llmModel, llmProvider, llmModels: llmModels.map((item) => item.name), llmModel })
+          return sendJson(response, 200, { connected: true, latencyMs: Date.now() - started, models: groups.flat(), modelPaths, upscalers, ltxModel: latentUpscalers.find((name) => /ltx-2\.5.*spatial.*x2/i.test(name)) ?? '', ltxVae: vaes.find((name) => /ltx-2\.5.*video.*vae/i.test(name)) ?? '', ltxUpscaleReady: ltxUpscaleMissing.length === 0, ltxUpscaleMissing, ltxNativeReady: ltxNativeMissing.length === 0, ltxNativeMissing, ollamaModels: llmModels.map((item) => item.name), ollamaModel: llmModel, llmProvider, llmModels: llmModels.map((item) => item.name), llmModel })
         } catch (error) {
-          return sendJson(response, 200, { connected: false, latencyMs: Date.now() - started, models: groups.flat(), error: error instanceof Error ? error.message : String(error) })
+          return sendJson(response, 200, { connected: false, latencyMs: Date.now() - started, models: groups.flat(), modelPaths, error: error instanceof Error ? error.message : String(error) })
         }
       }
       if (url.pathname === '/api/lan/characters' && request.method === 'GET') return sendJson(response, 200, { characters: mobileCharacterLibrary })
@@ -1266,6 +1272,11 @@ app.whenReady().then(async () => {
   ipcMain.handle('models:scan', async (_event, settings: AppSettings) => {
     const groups = await Promise.all(modelKinds.map((kind) => scanDirectory(settings.paths[kind], kind)))
     return groups.flat().sort((a, b) => a.name.localeCompare(b.name))
+  })
+  // 与 models:scan 分开：诊断只报目录状态，不改变扫描结果形状（空目录不再被误判成「模型缺失」）
+  ipcMain.handle('models:diagnostics', async (_event, settings: AppSettings) => {
+    const items = diagnoseModelPaths(settings.paths)
+    return { items, summary: summarizeModelPaths(items) }
   })
   ipcMain.handle('comfy:status', async (_event, url: string) => {
     const started = Date.now()

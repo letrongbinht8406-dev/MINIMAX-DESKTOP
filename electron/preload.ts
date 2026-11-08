@@ -50,6 +50,7 @@ contextBridge.exposeInMainWorld('minimax', {
   chooseMedia: (type: 'image' | 'video' | 'audio') => ipcRenderer.invoke('dialog:media', type),
   chooseVideos: () => ipcRenderer.invoke('dialog:videos'),
   scanModels: (settings: unknown) => ipcRenderer.invoke('models:scan', settings),
+  getModelDiagnostics: (settings: unknown) => ipcRenderer.invoke('models:diagnostics', settings),
   getComfyStatus: (url: string) => ipcRenderer.invoke('comfy:status', url),
   submitPrompt: (url: string, prompt: unknown, clientId?: string) => ipcRenderer.invoke('comfy:submit', url, prompt, clientId),
   getQueue: (url: string) => ipcRenderer.invoke('comfy:queue', url),

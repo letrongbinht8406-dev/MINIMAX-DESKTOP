@@ -257,6 +257,19 @@ export type ModelFile = {
   bytes: number
 }
 
+/** 模型目录诊断：区分「路径不存在」「目录为空」「可读且有模型」，避免空列表被误判成缺模型 */
+export type ModelPathStatus = 'ok' | 'empty' | 'missing' | 'unreadable'
+export type ModelPathDiagnostic = {
+  kind: ModelKind
+  path: string
+  status: ModelPathStatus
+  fileCount: number
+}
+export type ModelPathDiagnostics = {
+  items: ModelPathDiagnostic[]
+  summary: { total: number; ok: number; empty: number; missing: number; unreadable: number; files: number }
+}
+
 export type ReferenceImageType = 'master' | 'face' | 'full-body' | 'three-quarter' | 'profile' | 'back' | 'detail' | 'other'
 export type ReferenceHandoffRole = 'subject' | 'wardrobe' | 'prop' | 'location' | 'composition' | 'lighting-style'
 export type ReferenceRetention = 'preserve' | 'guide'
@@ -591,6 +604,7 @@ export type DesktopApi = {
   chooseMedia(type: MediaKind): Promise<{ path: string; name: string } | null>
   chooseVideos(): Promise<Array<{ path: string; name: string }>>
   scanModels(settings: AppSettings): Promise<ModelFile[]>
+  getModelDiagnostics(settings: AppSettings): Promise<ModelPathDiagnostics>
   getComfyStatus(url: string): Promise<ComfyStatus>
   submitPrompt(url: string, prompt: unknown, clientId?: string): Promise<{ prompt_id: string; number?: number; node_errors?: unknown }>
   getQueue(url: string): Promise<unknown>
