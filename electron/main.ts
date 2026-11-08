@@ -564,7 +564,11 @@ function sendJson(response: ServerResponse, status: number, value: unknown) {
 
 function comfyChoices(info: Record<string, unknown>, node: string, field: string) {
   const definition = info[node] as { input?: { required?: Record<string, unknown[]> } } | undefined
-  const values = definition?.input?.required?.[field]?.[0]
+  const input = definition?.input?.required?.[field]
+  if (!Array.isArray(input)) return []
+  // 新版 ComfyUI 把下拉项改成了 ["COMBO", { options: [...] }]，旧版是 [[...]]；
+  // 两种形态都认，否则 LAN/手机端会把满屏模型判成空列表。
+  const values = Array.isArray(input[0]) ? input[0] : (input[1] as { options?: unknown[] } | undefined)?.options
   return Array.isArray(values) ? values.filter((value): value is string => typeof value === 'string') : []
 }
 
@@ -661,8 +665,8 @@ async function handleLanRequest(request: IncomingMessage, response: ServerRespon
           const ltxUpscaleMissing = ltxUpscaleRequiredNodes.filter((node) => !info[node])
           const ltxNativeMissing = ltxNativeRequiredNodes.filter((node) => !info[node])
           const llmProvider = settings.llmProvider ?? 'ollama'
-          const llmUrl = llmProvider === 'lmstudio' ? settings.lmStudioUrl : settings.ollamaUrl
-          const llmModel = llmProvider === 'lmstudio' ? settings.lmStudioModel : settings.ollamaModel
+          const llmUrl = llmProvider === 'lmstudio' ? settings.lmStudioUrl : llmProvider === 'llama' ? settings.llamaUrl : settings.ollamaUrl
+          const llmModel = llmProvider === 'lmstudio' ? settings.lmStudioModel : llmProvider === 'llama' ? settings.llamaModel : settings.ollamaModel
           const llmModels = await listLlmModels(llmUrl, llmProvider).catch(() => [])
           return sendJson(response, 200, { connected: true, latencyMs: Date.now() - started, models: groups.flat(), upscalers, ltxModel: latentUpscalers.find((name) => /ltx-2\.5.*spatial.*x2/i.test(name)) ?? '', ltxVae: vaes.find((name) => /ltx-2\.5.*video.*vae/i.test(name)) ?? '', ltxUpscaleReady: ltxUpscaleMissing.length === 0, ltxUpscaleMissing, ltxNativeReady: ltxNativeMissing.length === 0, ltxNativeMissing, ollamaModels: llmModels.map((item) => item.name), ollamaModel: llmModel, llmProvider, llmModels: llmModels.map((item) => item.name), llmModel })
         } catch (error) {
