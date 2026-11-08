@@ -17,7 +17,7 @@
     "build:electron": "tsc -p tsconfig.electron.json",
     "typecheck": "tsc --noEmit && tsc -p tsconfig.electron.json --noEmit",
     "lint": "eslint . --max-warnings 0",
-    "test": "pnpm test:navigation && pnpm test:scene && pnpm test:character-library && pnpm test:prompt-auto-tags && pnpm test:lm-studio-api && pnpm test:llm-stream && pnpm test:preload-sandbox && pnpm test:workflows && pnpm test:ltx-ripple && pnpm test:fire-red-edit && pnpm test:continuation && pnpm test:atomic-saves && pnpm test:movie-editor && pnpm test:comfy-cancel && pnpm test:comfy-job-state && pnpm test:job-persistence && pnpm test:legacy-browser-storage && pnpm test:workspace-persistence && pnpm test:image-providers && pnpm test:model-input-redline && pnpm test:zimage-pin && pnpm test:studio-pin",
+    "test": "pnpm test:navigation && pnpm test:scene && pnpm test:character-library && pnpm test:prompt-auto-tags && pnpm test:lm-studio-api && pnpm test:llm-stream && pnpm test:preload-sandbox && pnpm test:workflows && pnpm test:ltx-ripple && pnpm test:fire-red-edit && pnpm test:continuation && pnpm test:atomic-saves && pnpm test:movie-editor && pnpm test:comfy-cancel && pnpm test:comfy-job-state && pnpm test:job-persistence && pnpm test:legacy-browser-storage && pnpm test:workspace-persistence && pnpm test:image-providers && pnpm test:model-input-redline && pnpm test:zimage-pin && pnpm test:studio-pin && pnpm test:prompt-library",
     "test:comfy-cancel": "node scripts/test-comfy-cancel.cjs",
     "test:comfy-job-state": "node scripts/test-comfy-job-state.cjs",
     "test:job-persistence": "node scripts/test-job-persistence.cjs",
@@ -51,7 +51,8 @@
     "test:image-providers": "node scripts/test-image-providers.cjs",
     "test:model-input-redline": "node scripts/test-model-input-redline.cjs",
     "test:zimage-pin": "node scripts/test-zimage-pin.cjs",
-    "test:studio-pin": "node scripts/test-studio-pin.cjs"
+    "test:studio-pin": "node scripts/test-studio-pin.cjs",
+    "test:prompt-library": "node scripts/test-prompt-library.cjs"
   },
   "dependencies": {
     "@radix-ui/react-alert-dialog": "^1.1.23",

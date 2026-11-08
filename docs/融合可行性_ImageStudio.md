@@ -54,3 +54,9 @@
 ## 5. 结论
 
 **走 A 路线（3-5 天）**：移植 provider 层 + 设置选择器，H3 视频侧保持 Oyama 现状；ImageStudio 保留为 provider 参考实现。排期接在 P0-1 红线测试之后（新 provider 一并纳入 CJK 守卫）。
+
+## 6. 落地记录
+
+- 2026-11-02/03：A 路线已落地——`src/lib/imageProviders/`（provider/ir/types/resolve/studio/studioPin/customRegistry + qwenImage21/qwenImage2512/mossImage/flux1Dev/zImage 五个 provider），SettingsView 有「图像生成模型」选择器与自定义模型注册。
+- 2026-11-08：**提示词库**并入图像工作区（B 路线里唯一直接影响日常的一块）：`src/lib/promptLibrary.ts`（历史+收藏、同文本去重、上限 100 且收藏不裁、参数快照）+ `src/components/PromptLibraryPanel.tsx`（历史/收藏页签、搜索、星标、改名、删除、一键回填）+ `src/styles/prompt-library.css`；`ZImageWorkspace` 提交成功后自动入库，条目只在同 provider 下回填参数，避免跨 provider 组件错位。门禁新增 `scripts/test-prompt-library.cjs`（`pnpm test:prompt-library`，含 CJK 红线扫描）。
+- 仍未移植：image-studio 的批量队列、作品集视图、图像/视频统一任务队列（Oyama 侧已有渲染队列，合并需先对齐队列状态机，留待单独排期）。

@@ -1,6 +1,6 @@
 import { PreviewPanel, ProductionLoading } from './Workspace'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { AlertCircle, Check, CircleStop, Dices, Film, Gauge, ImagePlus, LoaderCircle, Pin, Sparkles, WandSparkles } from 'lucide-react'
+import { AlertCircle, Check, CircleStop, Dices, Film, Gauge, ImagePlus, LoaderCircle, Library, Pin, Sparkles, WandSparkles } from 'lucide-react'
 import { buildZImage, ZIMAGE_DEFAULT_NEGATIVE_PROMPT, type ZImageVariant } from '../lib/zimage'
 import { imageProviders, providerCatalog } from '../lib/imageProviders/index'
 import { loadFilePins, saveFilePin, clearFilePin, resolvePinnedProvider } from '../lib/zimagePin'
@@ -11,6 +11,8 @@ import type { ComfyPrompt } from '../lib/workflow'
 import { choices, type ObjectInfo } from '../lib/comfyInfo'
 import { RenderSize } from './RenderSize'
 import { SmartPromptEditor } from './SmartPromptEditor'
+import { PromptLibraryPanel } from './PromptLibraryPanel'
+import { loadPromptLibrary, rememberPrompt, removeEntry, renameEntry, savePromptLibrary, toggleFavorite, type PromptLibraryEntry } from '../lib/promptLibrary'
 import type { MediaFile, WorkflowGpuRouting } from '../types'
 import { useLivePreview, type LiveProgress } from '../lib/useLivePreview'
 
@@ -124,6 +126,8 @@ export function ZImageWorkspace({
   const [job, setJob] = useState<ZImageJob | null>(null)
   const [result, setResult] = useState<MediaFile | null>(null)
   const [pinMap, setPinMap] = useState<Record<string, import('../lib/zimagePin').ZImageFilePin>>(() => loadFilePins(localStorage))
+  const [libraryEntries, setLibraryEntries] = useState<PromptLibraryEntry[]>(() => loadPromptLibrary())
+  const [libraryOpen, setLibraryOpen] = useState(false)
 
   // pin 恢复只改 providerId/steps/cfg/seed/resolution；model/encoder/vae 仍是上一个 provider 会话里存的值。
   // 等 object_info 就绪后按 pin 的 provider 重新解析组件（与 switchProvider 同一逻辑），避免跨 provider 组件错位。
@@ -283,6 +287,8 @@ export function ZImageWorkspace({
   const stepBounds: [number, number] = selectedProvider ? ((selectedProvider.constraints?.steps as [number, number] | undefined) ?? [1, 80]) : variant === 'turbo' ? [4, 20] : [28, 50]
   const cfgBounds: [number, number] = selectedProvider ? ((selectedProvider.constraints?.cfg as [number, number] | undefined) ?? [1, 10]) : variant === 'turbo' ? [1, 3] : [3, 5]
 
+  const persistLibrary = (next: PromptLibraryEntry[]) => { setLibraryEntries(next); savePromptLibrary(next) }
+
   const create = async () => {
     if (!connected || !activeAvailable || !prompt.trim()) return
     setBusy(true); setResult(null); setError(false); liveProgressRef.current = null; setLiveProgress(null); setMessage(`正在提交${selectedProvider?.label ?? (variant === 'turbo' ? 'Z-Image 内置管线（Turbo）' : 'Z-Image 内置管线（基础）')} 工作流…`)
@@ -313,9 +319,33 @@ export function ZImageWorkspace({
       live.registerWorkflow(response.prompt_id, graph, livePreview)
       if (!selectedProvider && gpuRouting) console.info('[GPU Routing] Z-Image component routing enabled.', gpuRouting)
       updateJob({ id: response.prompt_id, url })
+      persistLibrary(rememberPrompt(libraryEntries, {
+        text: prompt.trim(),
+        negative: negativePrompt.trim() || undefined,
+        providerId,
+        options: { resolution, providerId, variant, sampler, scheduler, seed, steps, guidance },
+      }))
     } catch (caught) {
       setMessage(caught instanceof Error ? caught.message : String(caught)); setError(true); setBusy(false)
     }
+  }
+
+  /** 提示词库：只改文本与同 provider 的参数，避免跨 provider 套用组件错位 */
+  const applyPromptEntry = (entry: PromptLibraryEntry) => {
+    setPrompt(entry.text)
+    setNegativePrompt(entry.negative ?? '')
+    if (entry.providerId === providerId) {
+      if (entry.options.resolution) setResolution(entry.options.resolution)
+      if (typeof entry.options.seed === 'number') setSeed(entry.options.seed)
+      if (typeof entry.options.steps === 'number') setSteps(entry.options.steps)
+      if (typeof entry.options.guidance === 'number') setGuidance(entry.options.guidance)
+      if (entry.options.sampler) setSampler(entry.options.sampler)
+      if (entry.options.scheduler) setScheduler(entry.options.scheduler)
+      setMessage('已从提示词库填入提示词与参数。')
+    } else {
+      setMessage(`已填入提示词；该条属于 ${entry.providerId}，参数未套用（当前为 ${providerId}）。`)
+    }
+    setError(false)
   }
 
   const cancel = async () => {
@@ -364,8 +394,16 @@ export function ZImageWorkspace({
         <div className="field-group">
           <div className="field-label"><label htmlFor="zimage-prompt">图像提示词</label><span>{prompt.length.toLocaleString()} characters</span></div>
           <SmartPromptEditor id="zimage-prompt" value={prompt} onChange={setPrompt} placeholder="Describe the subject, environment, composition, lens, lighting, color, and opening-frame details… Type // for production commands." disabled={busy} />
-          <div className="zimage-prompt-actions"><button className="secondary-button" onClick={() => void enhance()} disabled={busy || assisting || !ollamaAvailable || !prompt.trim()} title={ollamaAvailable ? `Enhance with ${ollamaModel}` : `Configure ${llmProvider === 'lmstudio' ? 'LM Studio' : llmProvider === 'llama' ? 'llama.cpp' : 'Ollama'} in Settings`}>{assisting ? <LoaderCircle size={15} className="spin" /> : <WandSparkles size={15} />}Enhance with {llmProvider === 'lmstudio' ? 'LM Studio' : llmProvider === 'llama' ? 'llama.cpp' : 'Ollama'}</button><small>{ollamaAvailable ? `${ollamaModel} · local` : `${llmProvider === 'lmstudio' ? 'LM Studio' : llmProvider === 'llama' ? 'llama.cpp' : 'Ollama'} unavailable`}</small></div>
+          <div className="zimage-prompt-actions"><button className="secondary-button" onClick={() => void enhance()} disabled={busy || assisting || !ollamaAvailable || !prompt.trim()} title={ollamaAvailable ? `Enhance with ${ollamaModel}` : `Configure ${llmProvider === 'lmstudio' ? 'LM Studio' : llmProvider === 'llama' ? 'llama.cpp' : 'Ollama'} in Settings`}>{assisting ? <LoaderCircle size={15} className="spin" /> : <WandSparkles size={15} />}Enhance with {llmProvider === 'lmstudio' ? 'LM Studio' : llmProvider === 'llama' ? 'llama.cpp' : 'Ollama'}</button><button type="button" className="secondary-button prompt-library-trigger" onClick={() => setLibraryOpen((open) => !open)} aria-expanded={libraryOpen} title="提示词历史与收藏：提交过或收藏过的提示词连同参数都在这里"><Library size={15} />提示词库{libraryEntries.length > 0 ? ` (${libraryEntries.length})` : ''}</button><small>{ollamaAvailable ? `${ollamaModel} · local` : `${llmProvider === 'lmstudio' ? 'LM Studio' : llmProvider === 'llama' ? 'llama.cpp' : 'Ollama'} unavailable`}</small></div>
         </div>
+        {libraryOpen && <PromptLibraryPanel
+          entries={libraryEntries}
+          onApply={applyPromptEntry}
+          onToggleFavorite={(id) => persistLibrary(toggleFavorite(libraryEntries, id))}
+          onRename={(id, name) => persistLibrary(renameEntry(libraryEntries, id, name))}
+          onRemove={(id) => persistLibrary(removeEntry(libraryEntries, id))}
+          onClose={() => setLibraryOpen(false)}
+        />}
 
         {(selectedProvider || variant === 'base') && <div className="field-group zimage-negative-prompt"><div className="field-label"><label htmlFor="zimage-negative-prompt">负面提示词 <small>质量预设</small></label><span>{negativePrompt.length.toLocaleString()} 字符</span></div><textarea id="zimage-negative-prompt" value={negativePrompt} onChange={(event) => setNegativePrompt(event.target.value)} placeholder="描述要抑制的瑕疵或不想要的元素…" disabled={busy} /><p className="field-help">Prefilled with a balanced artifact, anatomy, geometry, and unwanted-text filter. Edit or clear it when those elements are intentional.</p></div>}
 
