@@ -8,6 +8,7 @@ import { NumberField, SelectField } from './components/FormFields'
 import { SettingsView } from './components/SettingsView'
 import { ComfyActivityConsole, JobExecutionChips, JobsView, StatusBadge } from './components/JobsView'
 import { WorkspaceNavigator } from './components/WorkspaceNavigator'
+import { InfiniteCanvas } from './components/InfiniteCanvas'
 import { WorkspaceSectionTabs, type WorkspaceSectionTab } from './components/WorkspaceSectionTabs'
 import { writeLocalJson } from './lib/localPersistence'
 import { collectWorkspaceSearchEntries, compactSearchText, highlightWorkspaceSearchText, type WorkspaceSearchEntry } from './lib/workspaceSearch'
@@ -20,7 +21,7 @@ import { H3_BENCHMARK_CONFIG_STORAGE_KEY, H3_BENCHMARK_STORAGE_KEY, benchmarkRes
 import { findH3ParallelAttentionNode, findH3PreviewOverrideNode, findSolAttentionNode, findSolCompatibleCacheNode } from './lib/h3NodeDetection'
 import { workspaceTips } from './lib/workspaceTips'
 import { useLocalPersistence } from './lib/useLocalPersistence'
-import { workspaceLabel, workspaceProjectScope, workspaceProjectLabel, workspaceStorageKey, type WorkspaceProjectScope } from './lib/workspaceNavigation'
+import { workspaceDestinations, workspaceLabel, workspaceProjectScope, workspaceProjectLabel, workspaceStorageKey, type WorkspaceProjectScope } from './lib/workspaceNavigation'
 import { PreviewPanel } from './components/Workspace'
 import { importSceneDraft } from './lib/sceneLegacyAdapter'
 import { analyzeSceneReference } from './lib/referenceAnalysis'
@@ -336,6 +337,7 @@ function App() {
   const legacyMigrationDismissalKey = 'oyama.legacy-migration-banner-dismissed.v1'
   const persisted = useMemo(readWorkspace, [])
   const [view, setView] = useState<View>('create')
+  const [canvasMode, setCanvasMode] = useState(false)
   const [photoEditIncomingSource, setPhotoEditIncomingSource] = useState<{ file: MediaFile; size: { width: number; height: number } } | null>(null)
   const [rippleIncomingReplacement, setRippleIncomingReplacement] = useState<{ file: MediaFile; size: { width: number; height: number } } | null>(null)
   const [navigatorOpen, setNavigatorOpen] = useState(false)
@@ -3027,6 +3029,7 @@ const refreshOllama = useCallback(async (nextSettings: AppSettings, announce = f
   }
   return (
     <div className={`app-shell ${sidebarOpen ? '' : 'sidebar-collapsed'} ${view === 'create' ? 'video-shell-active' : `studio-shell-active studio-view-${view}`}`}>
+      {canvasMode && <div className="infinite-canvas-overlay"><InfiniteCanvas destinations={workspaceDestinations} onOpenWorkspace={(next, engine) => { if (engine) setMusicEngine(engine); setView(next); setCanvasMode(false) }} onExit={() => setCanvasMode(false)} /></div>}
       <header className="titlebar" aria-label="应用程序标题栏">
         {view !== 'create' && <StudioTopBar view={view} musicEngine={musicEngine} projectName={workspaceProjects.find(project => project.id === activeWorkspaceProjectId && project.scope === workspaceProjectScope(view, musicEngine))?.name ?? '当前工作区'} connected={status.connected} onOpenProjects={() => setProjectManagerOpen(true)} onFindSettings={openWorkspaceSearch} onOpenSettings={() => setView('settings')} onOpenCompare={() => setCompareOpen(true)} compareOpen={compareOpen} />}
         <button className="titlebar-mobile-menu" onClick={() => setSidebarOpen(true)} aria-label="打开工作区菜单"><Menu size={18} /></button>
@@ -3043,6 +3046,7 @@ const refreshOllama = useCallback(async (nextSettings: AppSettings, announce = f
         {(view === 'create' || view === 'ltx25' || view === 'ltxripple' || view === 'zimage') && <button className="titlebar-action titlebar-reset" onClick={resetCurrentWorkspace} title={view === 'create' ? 'Clear H3 prompt and sources; keep render settings' : '重置此工作区中的提示词、选项、媒体、选择项和当前预览'}><RotateCcw size={14} />{view === 'create' ? '清除提示词和素材' : '重置工作区'}</button>}
         {workspaceProjectScope(view, musicEngine) && <button className="titlebar-action titlebar-projects" onClick={() => setProjectManagerOpen(true)} title="保存、打开和管理完整的工作区项目"><FolderOpen size={14} /><span>项目：当前工作区</span><ChevronDown size={13} /></button>}
         <button className="titlebar-action titlebar-help" onClick={() => setHelpOpen(true)} title="显示此工作区的提示" aria-label="显示工作区提示"><HelpCircle size={15} />Tips</button>
+        <button className="titlebar-action" type="button" onClick={() => setCanvasMode(true)} title="在无限画布上查看全部工作区、便签与连线">无限画布</button>
         <button className="titlebar-action" onClick={() => { setLanOpen(true); void window.minimax.getLanStatus().then(setLanStatus) }} title="通过本地网络共享 Oyama AI 视频工作室"><QrCode size={14} />LAN</button>
       </header>
 

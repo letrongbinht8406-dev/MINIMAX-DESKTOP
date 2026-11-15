@@ -1,0 +1,217 @@
+.infinite-canvas-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  background: var(--bg, #151515);
+}
+
+.infinite-canvas-root {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  background: var(--bg, #151515);
+  color: var(--text, #e6edf3);
+  font-size: 13px;
+}
+
+.infinite-canvas-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--line, #343434);
+  background: var(--surface, #1c1c1c);
+}
+
+.infinite-canvas-brand {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.infinite-canvas-brand strong { font-size: 15px; }
+.infinite-canvas-brand span { color: var(--muted, #adb3bc); font-size: 11px; }
+
+.infinite-canvas-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.infinite-canvas-actions button {
+  padding: 5px 10px;
+  border: 1px solid var(--line-strong, #484848);
+  border-radius: var(--radius, 7px);
+  background: var(--surface-2, #242424);
+  color: var(--text, #e6edf3);
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.infinite-canvas-actions button:hover { border-color: var(--accent, #79b8ff); }
+.infinite-canvas-actions button.is-active { background: var(--accent-soft, rgb(88 166 255 / 12%)); border-color: var(--accent, #79b8ff); }
+.infinite-canvas-actions .infinite-canvas-exit { background: var(--accent, #79b8ff); color: var(--accent-ink, #101820); border-color: transparent; }
+.infinite-canvas-zoom { min-width: 48px; text-align: center; color: var(--muted, #adb3bc); }
+
+.infinite-canvas-surface {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  touch-action: none;
+  cursor: grab;
+  background-color: var(--bg, #151515);
+  background-image: linear-gradient(to right, var(--line, #343434) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--line, #343434) 1px, transparent 1px);
+}
+
+.infinite-canvas-surface:active { cursor: grabbing; }
+
+.infinite-canvas-world {
+  position: absolute;
+  left: 0;
+  top: 0;
+  transform-origin: 0 0;
+  width: 0;
+  height: 0;
+}
+
+.infinite-canvas-group {
+  position: absolute;
+  z-index: 0;
+  border: 1px dashed var(--line-strong, #484848);
+  border-radius: 12px;
+  background: rgb(255 255 255 / 2%);
+  pointer-events: none;
+}
+
+.infinite-canvas-group span {
+  position: absolute;
+  top: -11px;
+  left: 14px;
+  padding: 0 6px;
+  background: var(--bg, #151515);
+  color: var(--muted-2, #9299a3);
+  font-size: 11px;
+  letter-spacing: .08em;
+}
+
+.infinite-canvas-edges {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 1px;
+  height: 1px;
+  overflow: visible;
+  z-index: 1;
+  pointer-events: none;
+  color: var(--muted-2, #9299a3);
+}
+
+.infinite-canvas-edge path {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+  opacity: .55;
+}
+
+.infinite-canvas-card {
+  position: absolute;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  border: 1px solid var(--line-strong, #484848);
+  border-radius: var(--radius, 7px);
+  background: var(--surface, #1c1c1c);
+  box-shadow: 0 6px 18px rgb(0 0 0 / 35%);
+  overflow: hidden;
+  cursor: default;
+}
+
+.infinite-canvas-card.is-selected { border-color: var(--accent, #79b8ff); box-shadow: 0 0 0 1px var(--accent, #79b8ff); }
+.infinite-canvas-card.is-link-source { border-color: var(--accent, #79b8ff); }
+
+.infinite-canvas-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--line, #343434);
+  background: var(--surface-2, #242424);
+  cursor: grab;
+  user-select: none;
+}
+
+.infinite-canvas-card-title { font-weight: 600; font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.infinite-canvas-open {
+  flex-shrink: 0;
+  padding: 2px 6px;
+  border: 1px solid var(--line-strong, #484848);
+  border-radius: 5px;
+  background: transparent;
+  color: var(--accent, #79b8ff);
+  cursor: pointer;
+  font-size: 11px;
+}
+
+.infinite-canvas-open:hover { border-color: var(--accent, #79b8ff); }
+
+.infinite-canvas-card-body { padding: 8px 10px; min-height: 0; overflow: hidden; }
+.infinite-canvas-group-tag {
+  display: inline-block;
+  margin-bottom: 5px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: var(--accent-soft, rgb(88 166 255 / 12%));
+  color: var(--accent, #79b8ff);
+  font-size: 10px;
+}
+.infinite-canvas-card-body p { margin: 0; color: var(--muted, #adb3bc); font-size: 11px; line-height: 1.45; }
+
+.infinite-canvas-note {
+  flex: 1 1 auto;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 8px 10px;
+  border: 0;
+  resize: none;
+  background: transparent;
+  color: var(--text, #e6edf3);
+  font: inherit;
+  font-size: 12px;
+  outline: none;
+}
+
+.infinite-canvas-handle {
+  position: absolute;
+  top: 50%;
+  width: 10px;
+  height: 10px;
+  margin-top: -5px;
+  border: 1px solid var(--accent, #79b8ff);
+  border-radius: 50%;
+  background: var(--bg, #151515);
+}
+.infinite-canvas-handle-in { left: -6px; }
+.infinite-canvas-handle-out { right: -6px; }
+
+.infinite-canvas-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 6px 16px;
+  border-top: 1px solid var(--line, #343434);
+  background: var(--surface, #1c1c1c);
+  color: var(--muted-2, #9299a3);
+  font-size: 11px;
+}
