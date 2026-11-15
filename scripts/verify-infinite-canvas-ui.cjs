@@ -49,6 +49,9 @@ async function evaluate(expression) {
   if (result.exceptionDetails) throw new Error(result.exceptionDetails.text + ' :: ' + ((result.exceptionDetails.exception && result.exceptionDetails.exception.description) || ''))
   return result.result && result.result.value
 }
+async function clickEntry() {
+  return evaluate('(() => { const b = document.querySelector(".infinite-canvas-entry") || [...document.querySelectorAll("button")].find(x => x.textContent.includes("无限画布")); if (!b) return false; b.click(); return true })()')
+}
 async function clickText(text) {
   return evaluate('(() => { const t = [...document.querySelectorAll("button, [role=tab], a")].find(n => n.textContent.trim() === ' + JSON.stringify(text) + '); if (!t) return false; t.click(); return true; })()')
 }
@@ -95,9 +98,10 @@ async function main() {
   await until(() => evaluate('document.querySelector("#root") && document.querySelector("#root").textContent.includes("Oyama AI Video Studio")'), 'app shell', 45000)
   check('应用外壳真实加载（纯 web + browserMock，无需 Electron/ComfyUI）', true)
 
-  check('标题栏存在「无限画布」入口按钮', await evaluate('[...document.querySelectorAll("button")].some(b => b.textContent.trim() === "无限画布")'))
+  const entry = await evaluate('(() => { const b = document.querySelector(".infinite-canvas-entry"); if (!b) return null; const r = b.getBoundingClientRect(); const cs = getComputedStyle(b); return { w: Math.round(r.width), h: Math.round(r.height), x: Math.round(r.x), y: Math.round(r.y), display: cs.display, visible: r.width > 1 && r.height > 1 && cs.display !== "none" && cs.visibility !== "hidden" } })()')
+  check('「无限画布」入口在视口内真实可见', Boolean(entry && entry.visible), JSON.stringify(entry))
   check('初始为经典模式（无画布覆盖层）', await evaluate('!document.querySelector(".infinite-canvas-overlay")'))
-  check('点击「无限画布」打开覆盖层', await clickText('无限画布'))
+  check('点击「无限画布」打开覆盖层', await clickEntry())
   await until(() => evaluate('Boolean(document.querySelector(".infinite-canvas-overlay"))'), 'canvas overlay')
 
   const counts = await evaluate('({ cards: document.querySelectorAll(".infinite-canvas-card-workspace").length, groups: document.querySelectorAll(".infinite-canvas-group").length, notes: document.querySelectorAll(".infinite-canvas-card-note").length, edges: document.querySelectorAll(".infinite-canvas-edge path").length, brand: document.querySelector(".infinite-canvas-brand") && document.querySelector(".infinite-canvas-brand").textContent.trim(), status: document.querySelector(".infinite-canvas-status") && document.querySelector(".infinite-canvas-status").getAttribute("aria-live"), buttons: [...document.querySelectorAll(".infinite-canvas-actions button")].map(b => b.textContent.trim()) })')
@@ -176,7 +180,7 @@ async function main() {
 
   await send('Page.reload')
   await until(() => evaluate('document.querySelector("#root") && document.querySelector("#root").textContent.includes("Oyama AI Video Studio")'), 'app shell after reload', 45000)
-  check('刷新后重新打开无限画布', await clickText('无限画布'))
+  check('刷新后重新打开无限画布', await clickEntry())
   await until(() => evaluate('Boolean(document.querySelector(".infinite-canvas-overlay"))'), 'canvas after reload')
   const afterReload = await evaluate('({ notes: document.querySelectorAll(".infinite-canvas-card-note").length, noteValue: document.querySelector(".infinite-canvas-note") && document.querySelector(".infinite-canvas-note").value, cards: document.querySelectorAll(".infinite-canvas-card-workspace").length, edges: document.querySelectorAll(".infinite-canvas-edge path").length })')
   check('刷新后便签文本仍在（真实持久化）', afterReload.notes === 1 && afterReload.noteValue === noteText, JSON.stringify(afterReload))
@@ -187,7 +191,7 @@ async function main() {
   const appClass = await evaluate('document.querySelector(".app-shell").className')
   check('双击关闭画布并切到 queue 工作区', appClass.indexOf('studio-view-queue') >= 0, appClass)
 
-  check('再次打开无限画布', await clickText('无限画布'))
+  check('再次打开无限画布', await clickEntry())
   await until(() => evaluate('Boolean(document.querySelector(".infinite-canvas-overlay"))'), 'canvas reopened')
   check('点击「返回经典模式」', await clickText('返回经典模式'))
   await until(() => evaluate('!document.querySelector(".infinite-canvas-overlay")'), 'canvas exited')
@@ -195,7 +199,7 @@ async function main() {
 
   await send('Emulation.setDeviceMetricsOverride', { width: 860, height: 620, deviceScaleFactor: 1, mobile: false })
   await delay(200)
-  check('860x620 紧凑窗口打开无限画布', await clickText('无限画布'))
+  check('860x620 紧凑窗口打开无限画布', await clickEntry())
   await until(() => evaluate('Boolean(document.querySelector(".infinite-canvas-overlay"))'), 'canvas at compact size')
   const compact = await evaluate('({ w: innerWidth, sw: document.documentElement.scrollWidth, cards: document.querySelectorAll(".infinite-canvas-card-workspace").length })')
   check('紧凑窗口画布仍渲染 20 张卡片', compact.cards === 20, JSON.stringify(compact))

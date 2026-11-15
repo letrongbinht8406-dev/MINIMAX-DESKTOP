@@ -3030,6 +3030,7 @@ const refreshOllama = useCallback(async (nextSettings: AppSettings, announce = f
   return (
     <div className={`app-shell ${sidebarOpen ? '' : 'sidebar-collapsed'} ${view === 'create' ? 'video-shell-active' : `studio-shell-active studio-view-${view}`}`}>
       {canvasMode && <div className="infinite-canvas-overlay"><InfiniteCanvas destinations={workspaceDestinations} onOpenWorkspace={(next, engine) => { if (engine) setMusicEngine(engine); setView(next); setCanvasMode(false) }} onExit={() => setCanvasMode(false)} /></div>}
+      {!canvasMode && <button type="button" className="infinite-canvas-entry" onClick={() => setCanvasMode(true)} title="在无限画布上查看全部工作区、便签与连线"><span aria-hidden="true">◫</span>无限画布</button>}
       <header className="titlebar" aria-label="应用程序标题栏">
         {view !== 'create' && <StudioTopBar view={view} musicEngine={musicEngine} projectName={workspaceProjects.find(project => project.id === activeWorkspaceProjectId && project.scope === workspaceProjectScope(view, musicEngine))?.name ?? '当前工作区'} connected={status.connected} onOpenProjects={() => setProjectManagerOpen(true)} onFindSettings={openWorkspaceSearch} onOpenSettings={() => setView('settings')} onOpenCompare={() => setCompareOpen(true)} compareOpen={compareOpen} />}
         <button className="titlebar-mobile-menu" onClick={() => setSidebarOpen(true)} aria-label="打开工作区菜单"><Menu size={18} /></button>
