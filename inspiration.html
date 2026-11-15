@@ -1,0 +1,290 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>美学收集 · 灵感库 — AI 视觉设计作品集</title>
+<meta name="description" content="作品集灵感库：209 张美学收集素材，按画面内容分为产品摄影、空间场景、版式海报、插画、游戏幻想等八类。">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230A0C0E'/%3E%3Ctext x='16' y='21' font-family='sans-serif' font-size='11' font-weight='600' fill='%23C08A4A' text-anchor='middle'%3EAV%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css">
+<link rel="stylesheet" href="assets/style.css">
+<style>
+  /* ---- 灵感库页内样式：沿用 style.css 变量与组件，仅补瀑布流与灯箱 ---- */
+  .insp-top { max-width: var(--shell); margin: 0 auto; padding: 64px 32px 8px; }
+  .insp-top h1 { font-size: clamp(30px, 3.1vw, 46px); line-height: 1.2; font-weight: 600; letter-spacing: -0.015em; margin: 0 0 14px; }
+  .insp-lede { max-width: 62ch; color: var(--text-2); font-size: 14.5px; margin: 0 0 26px; }
+  .insp-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 14px; margin-bottom: 8px; }
+  .insp-search { display: inline-flex; align-items: center; gap: 8px; height: 34px; padding: 0 14px; border: 1px solid var(--line); border-radius: 999px; min-width: 240px; }
+  .insp-search i { color: var(--text-3); font-size: 15px; }
+  .insp-search input { flex: 1; background: none; border: 0; outline: 0; color: var(--text); font: inherit; font-size: 13px; }
+  .insp-stat { font-size: 12px; color: var(--text-3); }
+  .insp-stat b { color: var(--accent); font-weight: 600; }
+  .insp-grid { max-width: var(--shell); margin: 0 auto; padding: 26px 32px 12px; column-width: 248px; column-gap: 14px; }
+  .insp-card { break-inside: avoid; margin: 0 0 14px; background: var(--bg-card); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; cursor: zoom-in; transition: border-color 200ms var(--ease), transform 200ms var(--ease), box-shadow 200ms var(--ease); }
+  .insp-card:hover { border-color: var(--line-strong); transform: translateY(-3px); box-shadow: 0 16px 40px rgba(0,0,0,.5); }
+  .insp-card figure { margin: 0; }
+  .insp-card img { display: block; width: 100%; height: auto; filter: saturate(.94); transition: filter 200ms var(--ease); background: var(--bg-raise); }
+  .insp-card:hover img { filter: saturate(1.04); }
+  .insp-card figcaption { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 9px 11px 10px; font-size: 11.5px; color: var(--text-3); }
+  .insp-card figcaption .t { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .insp-card figcaption .c { flex: none; color: var(--accent); font-size: 10.5px; border: 1px solid rgba(192,138,74,.35); border-radius: 999px; padding: 1px 7px; }
+  .insp-empty { max-width: var(--shell); margin: 0 auto; padding: 70px 32px 90px; text-align: center; color: var(--text-3); font-size: 14px; }
+  .insp-tabs { display: inline-flex; gap: 8px; }
+  .insp-tab { height: 34px; padding: 0 16px; border: 1px solid var(--line); border-radius: 999px; background: none; color: var(--text-2); font: inherit; font-size: 13px; cursor: pointer; transition: border-color 200ms var(--ease), color 200ms var(--ease), background 200ms var(--ease); }
+  .insp-tab:hover { border-color: var(--line-strong); color: var(--text); }
+  .insp-tab.is-on { color: var(--accent); border-color: rgba(192,138,74,.45); background: rgba(192,138,74,.08); }
+  .insp-cardcard { break-inside: avoid; margin: 0 0 14px; background: var(--bg-card); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; cursor: default; transition: border-color 200ms var(--ease), transform 200ms var(--ease), box-shadow 200ms var(--ease); }
+  .insp-cardcard:hover { border-color: var(--line-strong); transform: translateY(-3px); box-shadow: 0 16px 40px rgba(0,0,0,.5); }
+  .cc-head { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+  .cc-head .sw { width: 16px; height: 16px; border-radius: 50%; border: 1px solid rgba(255,255,255,.18); flex: none; }
+  .cc-title { font-weight: 600; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .cc-cat { margin-left: auto; flex: none; font-size: 10.5px; color: var(--accent); border: 1px solid rgba(192,138,74,.35); border-radius: 999px; padding: 1px 7px; }
+  .cc-one { padding: 9px 12px 0; color: var(--text); font-size: 12.5px; line-height: 1.5; }
+  .cc-rows { padding: 8px 12px 12px; display: grid; gap: 5px; font-size: 11.5px; color: var(--text-2); }
+  .cc-row { display: flex; gap: 8px; min-width: 0; }
+  .cc-row .k { flex: none; width: 52px; color: var(--text-3); }
+  .cc-row .v { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+  .cc-row .v b { color: var(--text); font-weight: 600; }
+  .cc-thumb img { display: block; width: 100%; height: auto; border-top: 1px solid var(--line); }
+  .insp-lb { position: fixed; inset: 0; z-index: 90; display: none; place-items: center; padding: 40px; background: rgba(6,8,10,.94); backdrop-filter: blur(6px); }
+  .insp-lb.is-open { display: grid; }
+  .insp-lb img { max-width: min(1180px, 92vw); max-height: 82vh; border-radius: 8px; box-shadow: 0 30px 80px rgba(0,0,0,.7); }
+  .insp-lb-bar { position: absolute; left: 0; right: 0; bottom: 0; display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 16px 32px; font-size: 12px; color: var(--text-2); border-top: 1px solid var(--line); }
+  .insp-lb-bar .m { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .insp-lb-close { position: absolute; top: 20px; right: 24px; width: 38px; height: 38px; border: 1px solid var(--line-strong); border-radius: 50%; background: rgba(16,19,22,.8); color: var(--text-2); font-size: 17px; cursor: pointer; }
+  .insp-lb-close:hover { color: var(--text); border-color: var(--accent); }
+  @media (max-width: 760px) {
+    .insp-top { padding: 40px 18px 4px; }
+    .insp-grid { padding: 18px 18px 8px; column-width: auto; column-count: 2; column-gap: 10px; }
+    .insp-card { margin-bottom: 10px; }
+    .insp-card figcaption .c { display: none; }
+    .insp-lb { padding: 16px; }
+    .insp-lb-bar { padding: 12px 18px; }
+  }
+</style>
+</head>
+<body>
+
+<a class="skip" href="#insp">跳到灵感库</a>
+
+<!-- ============ 左侧图标导航（与首页同一套） ============ -->
+<nav class="rail" aria-label="主导航">
+  <a class="rail-mark" href="index.html" aria-label="回到作品集首页">AV</a>
+  <ul class="rail-list">
+    <li><a class="rail-link" href="index.html#hero"><i class="ph ph-sparkle" aria-hidden="true"></i><span>首页</span></a></li>
+    <li><a class="rail-link" href="index.html#works"><i class="ph ph-squares-four" aria-hidden="true"></i><span>作品</span></a></li>
+    <li><a class="rail-link" href="index.html#tools"><i class="ph ph-stack" aria-hidden="true"></i><span>索引</span></a></li>
+    <li><a class="rail-link is-active" href="inspiration.html"><i class="ph ph-images" aria-hidden="true"></i><span>灵感</span></a></li>
+    <li><a class="rail-link" href="index.html#projects"><i class="ph ph-briefcase" aria-hidden="true"></i><span>项目</span></a></li>
+    <li><a class="rail-link" href="index.html#method"><i class="ph ph-notebook" aria-hidden="true"></i><span>方法</span></a></li>
+    <li><a class="rail-link" href="index.html#about"><i class="ph ph-user" aria-hidden="true"></i><span>关于</span></a></li>
+  </ul>
+  <a class="rail-link rail-top" href="index.html#contact"><i class="ph ph-paper-plane-tilt" aria-hidden="true"></i><span>联系</span></a>
+</nav>
+
+<!-- ============ 顶部栏 ============ -->
+<header class="topbar">
+  <div class="topbar-inner">
+    <a class="brand" href="index.html">AI 视觉设计<span>灵感库 2026</span></a>
+    <label class="search" for="q">
+      <i class="ph ph-magnifying-glass" aria-hidden="true"></i>
+      <input id="q" type="search" placeholder="搜索灵感素材分类或文件名" autocomplete="off">
+      <kbd>/</kbd>
+    </label>
+    <div class="topbar-actions">
+      <a class="btn-line" href="index.html#works">返回作品集</a>
+    </div>
+  </div>
+</header>
+
+<main id="main">
+
+  <!-- ============ 灵感库头部 ============ -->
+  <div class="insp-top">
+    <p class="label">Inspiration Archive</p>
+    <h1>美学收集 · 灵感分类</h1>
+    <p class="insp-lede">日常存下来的 209 张参考素材，按画面内容逐张识图归类，用于定调、拆结构与找质感。点开可看原图，素材本体仍保留在原来的收集目录里。另收录 34 张「拆解卡片」——对参考详情页的配方级拆解（底色 / 强调色 / 主标 / 信任暗示），切到第二个标签页查看。</p>
+    <div class="insp-bar">
+      <div class="insp-tabs" id="tabs" role="tablist" aria-label="灵感库数据源"></div>
+      <div class="chips" id="chips"></div>
+      <label class="insp-search" for="q2">
+        <i class="ph ph-funnel" aria-hidden="true"></i>
+        <input id="q2" type="search" placeholder="按分类 / 文件名过滤" autocomplete="off">
+      </label>
+    </div>
+    <p class="insp-stat" id="stat"></p>
+  </div>
+
+  <!-- ============ 瀑布流 ============ -->
+  <section id="insp" aria-label="灵感素材列表">
+    <div class="insp-grid" id="grid"></div>
+    <div class="insp-empty" id="empty" hidden>没有匹配的素材，换个关键词或切回「全部」。</div>
+  </section>
+
+</main>
+
+<div class="insp-lb" id="lb" role="dialog" aria-modal="true" aria-label="原图预览">
+  <button class="insp-lb-close" id="lbClose" type="button" aria-label="关闭">&times;</button>
+  <img id="lbImg" alt="">
+  <div class="insp-lb-bar">
+    <span class="m" id="lbMeta"></span>
+    <a class="btn-line small" id="lbOpen" href="#" target="_blank" rel="noopener">新窗口打开原图</a>
+  </div>
+</div>
+
+<footer class="foot">
+  <span>美学收集 · 灵感库 / 共 <span id="footN">0</span> 张 · 8 分类</span>
+  <span>AI 视觉设计作品集 2026 · <a href="index.html">回到首页</a></span>
+</footer>
+
+<script src="assets/insp-cards.js"></script>
+<script src="assets/inspiration.js"></script>
+<script>
+  var P = window.INSP || { cats: [], items: [] };
+  var C = window.INSP_CARDS || { total: 0, groups: [] };
+  var CARDS = [];
+  C.groups.forEach(function (g) { g.items.forEach(function (it) { it.g = g.n; CARDS.push(it); }); });
+
+  var grid = document.getElementById('grid');
+  var empty = document.getElementById('empty');
+  var chips = document.getElementById('chips');
+  var stat = document.getElementById('stat');
+  var tabsEl = document.getElementById('tabs');
+  var q = document.getElementById('q');
+  var q2 = document.getElementById('q2');
+  var tab = 'photos', cur = '全部', kw = '';
+
+  document.getElementById('footN').textContent = P.items.length;
+
+  function chipEl(name, count) {
+    var b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'chip' + (name === cur ? ' is-on' : '');
+    b.textContent = name === '全部' ? '全部 ' + count : name + ' ' + count;
+    b.addEventListener('click', function () { cur = name; renderChips(); render(); });
+    return b;
+  }
+  function renderChips() {
+    chips.innerHTML = '';
+    if (tab === 'photos') {
+      chips.appendChild(chipEl('全部', P.items.length));
+      P.cats.forEach(function (c) { chips.appendChild(chipEl(c.n, c.c)); });
+    } else {
+      chips.appendChild(chipEl('全部', CARDS.length));
+      C.groups.forEach(function (g) { chips.appendChild(chipEl(g.n, g.count)); });
+    }
+  }
+  function tabEl(id, label, count) {
+    var b = document.createElement('button');
+    b.type = 'button';
+    b.setAttribute('role', 'tab');
+    b.setAttribute('aria-selected', tab === id ? 'true' : 'false');
+    b.className = 'insp-tab' + (tab === id ? ' is-on' : '');
+    b.textContent = label;
+    b.addEventListener('click', function () { tab = id; cur = '全部'; renderTabs(); renderChips(); render(); });
+    return b;
+  }
+  function renderTabs() {
+    tabsEl.innerHTML = '';
+    tabsEl.appendChild(tabEl('photos', '美学收集', P.items.length));
+    tabsEl.appendChild(tabEl('cards', '拆解卡片', CARDS.length));
+  }
+
+  function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+
+  function render() {
+    if (tab === 'photos') renderPhotos(); else renderCards();
+  }
+  function renderPhotos() {
+    var list = P.items.filter(function (it) {
+      if (cur !== '全部' && it.c !== cur) return false;
+      if (kw && (it.t + ' ' + it.c).toLowerCase().indexOf(kw) < 0) return false;
+      return true;
+    });
+    var frag = document.createDocumentFragment();
+    list.forEach(function (it) {
+      var d = document.createElement('article');
+      d.className = 'insp-card';
+      d.tabIndex = 0;
+      d.innerHTML = '<figure><img loading="lazy" decoding="async" src="' + it.s + '" alt="' + esc(it.t) + '"><figcaption><span class="t">' + esc(it.t) + '</span><span class="c">' + esc(it.c) + '</span></figcaption></figure>';
+      d.addEventListener('click', function () { openLb(it.s, it.c + ' · ' + it.t); });
+      d.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openLb(it.s, it.c + ' · ' + it.t); } });
+      frag.appendChild(d);
+    });
+    grid.innerHTML = '';
+    grid.appendChild(frag);
+    empty.hidden = list.length > 0;
+    stat.innerHTML = (cur === '全部' ? '全部分类' : cur) + ' · 显示 <b>' + list.length + '</b> / ' + P.items.length + ' 张';
+  }
+  function renderCards() {
+    var list = CARDS.filter(function (c) {
+      if (cur !== '全部' && c.g !== cur) return false;
+      if (kw && (c.title + ' ' + c.category + ' ' + c.oneline + ' ' + c.g).toLowerCase().indexOf(kw) < 0) return false;
+      return true;
+    });
+    var frag = document.createDocumentFragment();
+    list.forEach(function (c) {
+      var d = document.createElement('article');
+      d.className = 'insp-cardcard';
+      d.tabIndex = 0;
+      var sw = '';
+      if (c.bg) sw += '<span class="sw" style="background:' + esc(c.bg) + '" title="底色 ' + esc(c.bg) + '"></span>';
+      if (c.accent) sw += '<span class="sw" style="background:' + esc(c.accent) + '" title="强调色 ' + esc(c.accent) + '"></span>';
+      var rows = '';
+      ['主标', '底色', '强调色', '信任暗示'].forEach(function (k) {
+        if (c.recipe && c.recipe[k]) rows += '<div class="cc-row"><span class="k">' + k + '</span><span class="v"><b>' + esc(c.recipe[k].done) + '</b></span></div>';
+      });
+      var thumb = c.thumb ? '<div class="cc-thumb"><img loading="lazy" decoding="async" src="' + c.thumb + '" alt="' + esc(c.title) + ' 切片首屏"></div>' : '';
+      d.innerHTML = '<div class="cc-head">' + sw + '<span class="cc-title">' + esc(c.title) + '</span><span class="cc-cat">' + esc(c.g) + '</span></div>'
+        + '<div class="cc-one">' + esc(c.oneline) + '</div>'
+        + '<div class="cc-rows">' + rows + '</div>' + thumb;
+      if (c.thumb) {
+        var open = function () { openLb(c.thumb, c.category + ' · ' + c.title); };
+        d.addEventListener('click', open);
+        d.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(); } });
+      }
+      frag.appendChild(d);
+    });
+    grid.innerHTML = '';
+    grid.appendChild(frag);
+    empty.hidden = list.length > 0;
+    stat.innerHTML = '拆解卡片 · ' + (cur === '全部' ? '全部品类' : cur) + ' · 显示 <b>' + list.length + '</b> / ' + CARDS.length + ' 张';
+  }
+
+  var lb = document.getElementById('lb'), lbImg = document.getElementById('lbImg'),
+      lbMeta = document.getElementById('lbMeta'), lbOpen = document.getElementById('lbOpen');
+  function openLb(src, meta) {
+    lbImg.src = src; lbImg.alt = meta;
+    lbMeta.textContent = meta;
+    lbOpen.href = src;
+    lb.classList.add('is-open');
+    document.body.classList.add('is-locked');
+  }
+  function closeLb() {
+    lb.classList.remove('is-open');
+    document.body.classList.remove('is-locked');
+    lbImg.removeAttribute('src');
+  }
+  document.getElementById('lbClose').addEventListener('click', closeLb);
+  lb.addEventListener('click', function (e) { if (e.target === lb) closeLb(); });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') closeLb();
+    if (e.key === '/' && document.activeElement.tagName !== 'INPUT') { e.preventDefault(); q.focus(); }
+  });
+
+  function onKw(v) {
+    kw = (v || '').trim().toLowerCase();
+    if (q.value !== v) q.value = v;
+    if (q2.value !== v) q2.value = v;
+    render();
+  }
+  q.addEventListener('input', function () { onKw(q.value); });
+  q2.addEventListener('input', function () { onKw(q2.value); });
+
+  renderTabs();
+  renderChips();
+  render();
+
+</script>
+</body>
+</html>

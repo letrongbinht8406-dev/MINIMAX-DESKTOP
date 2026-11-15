@@ -1,0 +1,325 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI 视觉设计 · 作品集</title>
+<meta name="description" content="游戏与电商视觉方向的 AI 视觉设计作品集，收录主视觉、角色立绘、电商主图、详情页与内容封面。">
+<link rel="preconnect" href="https://picsum.photos">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230A0C0E'/%3E%3Ctext x='16' y='21' font-family='sans-serif' font-size='11' font-weight='600' fill='%23C08A4A' text-anchor='middle'%3EAV%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+
+<a class="skip" href="#works">跳到作品</a>
+
+<!-- ============ 左侧图标导航 ============ -->
+<nav class="rail" aria-label="主导航">
+  <a class="rail-mark" href="#hero" aria-label="回到顶部">AV</a>
+  <ul class="rail-list">
+    <li><a class="rail-link is-active" href="#hero"><i class="ph ph-sparkle" aria-hidden="true"></i><span>首页</span></a></li>
+    <li><a class="rail-link" href="#works"><i class="ph ph-squares-four" aria-hidden="true"></i><span>作品</span></a></li>
+    <li><a class="rail-link" href="#tools"><i class="ph ph-stack" aria-hidden="true"></i><span>索引</span></a></li>
+    <li><a class="rail-link" href="inspiration.html"><i class="ph ph-images" aria-hidden="true"></i><span>灵感</span></a></li>
+    <li><a class="rail-link" href="#workflow"><i class="ph ph-path" aria-hidden="true"></i><span>路径</span></a></li>
+    <li><a class="rail-link" href="#projects"><i class="ph ph-briefcase" aria-hidden="true"></i><span>项目</span></a></li>
+    <li><a class="rail-link" href="#method"><i class="ph ph-notebook" aria-hidden="true"></i><span>方法</span></a></li>
+    <li><a class="rail-link" href="#about"><i class="ph ph-user" aria-hidden="true"></i><span>关于</span></a></li>
+  </ul>
+  <a class="rail-link rail-top" href="#contact"><i class="ph ph-paper-plane-tilt" aria-hidden="true"></i><span>联系</span></a>
+</nav>
+
+<!-- ============ 顶部栏 ============ -->
+<header class="topbar">
+  <div class="topbar-inner">
+    <a class="brand" href="#hero">AI 视觉设计<span>作品集 2026</span></a>
+    <label class="search" for="q">
+      <i class="ph ph-magnifying-glass" aria-hidden="true"></i>
+      <input id="q" type="search" placeholder="搜索作品、项目或工具" autocomplete="off">
+      <kbd>/</kbd>
+    </label>
+    <div class="topbar-actions">
+      <a class="btn-line" href="#contact">联系我</a>
+    </div>
+  </div>
+</header>
+
+<main id="main">
+
+  <!-- ============ 01 Hero ============ -->
+  <section class="hero" id="hero">
+    <div class="hero-copy">
+      <p class="label">AI 视觉设计师 · 游戏与电商</p>
+      <h1>把想法做成<br>能交付的画面。</h1>
+      <p class="lede">七年游戏与电商视觉经验。用 AI 生图铺量，用手工精修收口，把概念推到可以上线、可以投放的完成度。</p>
+      <div class="hero-actions">
+        <a class="btn" href="#works">看作品</a>
+        <a class="btn-line" href="#contact">聊合作</a>
+      </div>
+    </div>
+    <div class="hero-collage" aria-hidden="true">
+      <figure class="collage-a"><img src="https://picsum.photos/seed/hero-game-kv-gold/720/900" alt="" width="720" height="900" loading="eager"></figure>
+      <figure class="collage-b"><img src="https://picsum.photos/seed/hero-product-shot/720/540" alt="" width="720" height="540" loading="eager"></figure>
+      <figure class="collage-c"><img src="https://picsum.photos/seed/hero-character-art/600/750" alt="" width="600" height="750" loading="eager"></figure>
+    </div>
+  </section>
+
+  <!-- ============ 02 作品库 ============ -->
+  <section class="section" id="works">
+    <div class="section-head">
+      <div>
+        <p class="label">作品</p>
+        <h2>先看画面，<br>再看它是怎么来的。</h2>
+      </div>
+      <p class="head-note">每一件都标了工具、类型和制作思路。点开可以看完整提示词。</p>
+    </div>
+
+    <div class="filters">
+      <div class="filter-row">
+        <div class="tabs" role="tablist" aria-label="按工具筛选" id="toolTabs"></div>
+        <div class="sort" role="group" aria-label="排序方式">
+          <button class="sort-btn is-on" data-sort="featured" type="button">精选</button>
+          <button class="sort-btn" data-sort="latest" type="button">最新</button>
+        </div>
+      </div>
+      <div class="chips" id="typeChips" role="group" aria-label="按画面类型筛选"></div>
+    </div>
+
+    <div class="grid" id="grid"></div>
+
+    <div class="empty" id="empty" hidden>
+      <i class="ph ph-magnifying-glass" aria-hidden="true"></i>
+      <p class="empty-title">没有匹配的作品</p>
+      <p class="empty-note">换个关键词，或者把筛选条件放宽一点。</p>
+      <button class="btn-line" id="resetFilters" type="button">清除全部筛选</button>
+    </div>
+  </section>
+
+  <!-- ============ 03 工具与类型索引 ============ -->
+  <section class="section" id="tools">
+    <div class="section-head">
+      <div>
+        <h2>工具索引与画面类型</h2>
+      </div>
+      <p class="head-note">左边是我日常在用的生产工具，右边是这些工具最终落到的画面类型。</p>
+    </div>
+    <div class="index-cols">
+      <div class="index-col">
+        <p class="index-kicker">工具</p>
+        <ul class="index-list">
+          <li><span class="index-name">Midjourney</span><span class="index-use">概念探索、氛围定调</span></li>
+          <li><span class="index-name">ComfyUI</span><span class="index-use">固定角色、批量分层出图</span></li>
+          <li><span class="index-name">Stable Diffusion</span><span class="index-use">局部重绘、垫图控形</span></li>
+          <li><span class="index-name">Photoshop</span><span class="index-use">合成、精修、文案排版</span></li>
+          <li><span class="index-name">ChatGPT</span><span class="index-use">卖点梳理、提示词转译</span></li>
+        </ul>
+      </div>
+      <div class="index-col">
+        <p class="index-kicker">画面类型</p>
+        <ul class="index-list">
+          <li><span class="index-name">游戏 KV</span><span class="index-use">版本主视觉、上线海报</span></li>
+          <li><span class="index-name">角色立绘</span><span class="index-use">全身立绘、三视图设定</span></li>
+          <li><span class="index-name">电商主图</span><span class="index-use">白底净图、场景氛围图</span></li>
+          <li><span class="index-name">详情页</span><span class="index-use">长图屏序、卖点可视化</span></li>
+          <li><span class="index-name">内容封面</span><span class="index-use">小红书、公众号首图</span></li>
+          <li><span class="index-name">活动视觉</span><span class="index-use">大促海报、UI 弹窗</span></li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- 灵感库：站点内页 inspiration.html -->
+    <a class="insp-entry" href="inspiration.html">
+      <div>
+        <p class="label">Inspiration Archive</p>
+        <h3>美学收集 · 209 张参考素材，按画面内容分成八类</h3>
+        <p>日常存下来的参考图逐张识图归类：产品摄影、空间场景、版式海报、插画、游戏幻想、色彩光影、人物、质感特写。用来定调、拆结构、找质感。</p>
+      </div>
+      <span class="btn-line">进入灵感库<i class="ph ph-arrow-right" aria-hidden="true"></i></span>
+    </a>
+  </section>
+
+  <!-- ============ 04 制作路径 ============ -->
+  <section class="section" id="workflow">
+    <div class="section-head">
+      <div>
+        <h2>一张图从需求到交付的四步</h2>
+      </div>
+      <p class="head-note">这是我的实际工作路径，不是工具流程图。</p>
+    </div>
+    <ol class="steps">
+      <li>
+        <span class="step-no">01</span>
+        <h3>找参考</h3>
+        <p>先确定这张图要对标什么。竞品、站内往期、目标人群的审美习惯，收三到五张，说清要借的是构图还是质感。</p>
+      </li>
+      <li>
+        <span class="step-no">02</span>
+        <h3>拆结构</h3>
+        <p>把参考拆成主体、留白区、光位、色彩层级四件事。先定版式骨架，再谈细节，否则出图永远改不到点上。</p>
+      </li>
+      <li>
+        <span class="step-no">03</span>
+        <h3>出图</h3>
+        <p>按骨架写提示词，先铺量再收敛。角色靠 LoRA 固定，产品靠垫图控形，每次只改一个变量。</p>
+      </li>
+      <li>
+        <span class="step-no">04</span>
+        <h3>精修交付</h3>
+        <p>合成、提质感、修手修边。所有中文和参数一律后贴，最后按投放尺寸出三套规格。</p>
+      </li>
+    </ol>
+  </section>
+
+  <!-- ============ 05 项目实战 ============ -->
+  <section class="section" id="projects">
+    <div class="section-head">
+      <div>
+        <h2>项目实战</h2>
+      </div>
+      <p class="head-note">长期合作的游戏项目，以及电商视觉的出图积累。</p>
+    </div>
+    <div class="project-grid">
+      <article class="project">
+        <p class="project-period">2021.06 至今</p>
+        <h3>猎奇互娱 · 游戏视觉</h3>
+        <p class="project-role">负责多款手游的版本主视觉、角色立绘与活动海报，从需求对齐到最终切图交付全流程。</p>
+        <ul class="project-tags">
+          <li>极品芝麻官</li><li>球球英雄</li><li>潮英雄</li><li>永夜降临</li><li>我是高手</li><li>我要练神功</li>
+        </ul>
+      </article>
+      <article class="project">
+        <p class="project-period">2019.09 至 2021.05</p>
+        <h3>星商创新 · 电商视觉</h3>
+        <p class="project-role">负责主图、详情页与大促会场的视觉产出，覆盖饰品、家居、数码等多个类目。</p>
+        <ul class="project-tags">
+          <li>主图</li><li>详情页</li><li>大促会场</li><li>类目规范</li>
+        </ul>
+      </article>
+      <article class="project">
+        <p class="project-period">2023 至今</p>
+        <h3>AI 生图工作流</h3>
+        <p class="project-role">把 ComfyUI 与 SD 接进日常出图流程，沉淀可复用的工作流与提示词库，出图周期显著压缩。</p>
+        <ul class="project-tags">
+          <li>ComfyUI</li><li>LoRA 训练</li><li>ControlNet</li><li>提示词库</li>
+        </ul>
+      </article>
+      <article class="project">
+        <p class="project-period">2024 至今</p>
+        <h3>内容运营</h3>
+        <p class="project-role">在小红书与公众号输出 AI 生图与设计拆解内容，把方法沉淀成可复用的教程与模板。</p>
+        <ul class="project-tags">
+          <li>小红书</li><li>公众号</li><li>教程拆解</li>
+        </ul>
+      </article>
+    </div>
+  </section>
+
+  <!-- ============ 06 落地方法 ============ -->
+  <section class="section" id="method">
+    <div class="section-head">
+      <div>
+        <p class="label">方法</p>
+        <h2>几条踩过坑才写下来的规矩</h2>
+      </div>
+      <p class="head-note">这些不是理论，是返工次数换来的。</p>
+    </div>
+    <div class="method-grid">
+      <article class="method">
+        <h3>中文小字不要交给 AI</h3>
+        <p>AI 直出的中文字形几乎必糊，笔画结构和间距都不对。所有文案、价格、参数在 PS 里用矢量文本后贴，字号按投放尺寸反推。</p>
+      </article>
+      <article class="method">
+        <h3>垫图强度守住 0.60</h3>
+        <p>重绘强度一旦超过 0.65，产品款型、珠宝镶口、机身边框就会变形。商品本体不可替换的类目，宁可靠灯光和背景补质感。</p>
+      </article>
+      <article class="method">
+        <h3>先定留白，再写提示词</h3>
+        <p>版式留白是构图阶段就要在提示词里指定的，不是后期挖图。留白区位置定了，信息层级才排得顺。</p>
+      </article>
+      <article class="method">
+        <h3>绝对化用语一律避掉</h3>
+        <p>顶级、第一、百分百这类表述不可控。把文案换成可举证的成分、工艺或使用感受，既安全也更有说服力。</p>
+      </article>
+      <article class="method">
+        <h3>材质要如实标注</h3>
+        <p>仿珍珠就写仿珍珠，合金就写合金。批发与详情页对材质表述尤其敏感，这一条直接关系到合规风险。</p>
+      </article>
+      <article class="method">
+        <h3>手部必须单独检查</h3>
+        <p>放大到 200% 逐个看手指数量与关节走向。手持类画面优先真拍或用 I2I 修，不要赌概率。</p>
+      </article>
+    </div>
+  </section>
+
+  <!-- ============ 07 关于 ============ -->
+  <section class="section" id="about">
+    <div class="about-wrap">
+      <div class="about-copy">
+        <h2>关于我</h2>
+        <p>环境设计专业出身，做了七年商业视觉。前四年在电商，把主图和详情页的转化逻辑摸清楚；后五年在游戏，做版本主视觉和角色立绘，习惯在限定风格里把画面做到位。</p>
+        <p>现在的主力工作方式是 AI 生成加手工精修。AI 负责铺量、试方向和氛围，判断、控形和最终完成度仍然由手来做。工具会换，但画面能不能站住这件事不会变。</p>
+      </div>
+      <dl class="about-facts">
+        <div><dt>方向</dt><dd>游戏视觉 / 电商视觉 / AIGC 出图</dd></div>
+        <div><dt>工具</dt><dd>Midjourney、ComfyUI、SD、Photoshop</dd></div>
+        <div><dt>经验</dt><dd>七年，游戏五年，电商四年</dd></div>
+        <div><dt>教育</dt><dd>汕头大学 · 环境设计</dd></div>
+        <div><dt>状态</dt><dd>接受视觉外包与全职机会</dd></div>
+      </dl>
+    </div>
+  </section>
+
+  <!-- ============ 08 联系 ============ -->
+  <section class="section contact" id="contact">
+    <h2>有活要出图，随时找我。</h2>
+    <p class="contact-note">版本主视觉、角色立绘、电商主图与详情页、内容封面都可以接。</p>
+    <div class="contact-actions">
+      <a class="btn" href="mailto:your@email.com">your@email.com</a>
+      <button class="btn-line" id="copyMail" type="button">复制邮箱</button>
+    </div>
+  </section>
+
+</main>
+
+<footer class="foot">
+  <p>本站为个人作品集演示，图片为占位素材，替换后即为正式版本。</p>
+  <p>2026 · AI 视觉设计</p>
+</footer>
+
+<!-- ============ 作品详情浮层 ============ -->
+<div class="detail" id="detail" hidden role="dialog" aria-modal="true" aria-labelledby="detailTitle">
+  <div class="detail-shell">
+    <div class="detail-stage">
+      <img id="detailImg" alt="">
+      <button class="detail-close" id="detailClose" type="button" aria-label="关闭详情">
+        <i class="ph ph-x" aria-hidden="true"></i>
+      </button>
+    </div>
+    <aside class="detail-info">
+      <p class="detail-kicker" id="detailKicker"></p>
+      <h2 id="detailTitle"></h2>
+      <p class="detail-sub" id="detailSub"></p>
+      <dl class="detail-meta">
+        <div><dt>项目</dt><dd id="metaProject"></dd></div>
+        <div><dt>工具</dt><dd id="metaTool"></dd></div>
+        <div><dt>类型</dt><dd id="metaType"></dd></div>
+        <div><dt>年份</dt><dd id="metaYear"></dd></div>
+      </dl>
+      <div class="detail-block">
+        <h3>提示词</h3>
+        <pre id="detailPrompt"></pre>
+        <button class="btn-line small" id="copyPrompt" type="button">复制提示词</button>
+      </div>
+      <div class="detail-block">
+        <h3>制作思路</h3>
+        <p id="detailNote"></p>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<script src="assets/data.js"></script>
+<script src="assets/app.js"></script>
+</body>
+</html>
